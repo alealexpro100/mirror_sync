@@ -10,14 +10,12 @@ fi
 mirror_path=$(grep -F "set base_path" "$1" | tr -s " " | cut -d' ' -f3)
 declare -gx mirror_path
 threads="$(nproc)"
-file_hashes="$mirror_path/var/SHA256"
-count=$(< "$file_hashes" wc -l)
-declare -gx count
-echo "Checking files..."
-echo "X - Signature is incorrect. Redownloading."
-echo "E - File not found. Skipping."
-echo "N - Checked. Hashsum is correct."
-echo "Files to check: $count"
+if [[ $(command -v "$1" &> /dev/null) ]]; then
+  parallel_command=parallel
+else
+  parallel_command=xargs
+fi
+echo -e "Help:\nN - Signature is correct.\nX - Signature is incorrect.\nE - File not found."
 rm -rf "$mirror_path/mirror/download_X.sh" "$mirror_path/mirror/download_E.sh"
 
 deb_check_file() {
@@ -25,16 +23,7 @@ deb_check_file() {
   sum="${file_sum[0]}"
   file="${file_sum[1]}"
   if [[ -f $mirror_path/mirror/$file ]]; then
-    case ${#sum} in
-      64) echo "$sum $mirror_path/mirror/$file" | sha256sum -c - &>> /dev/null
-      ;;
-      32) echo "$sum $mirror_path/mirror/$file" | md5sum -c - &>> /dev/null
-      ;;
-      *) echo "!"
-      ;;
-    esac
-    exit_code="$?"
-    if [[ $exit_code == "0" ]]; then
+    if echo "$sum $mirror_path/mirror/$file" | $CHECK_COMMAND -c - &>> /dev/null; then
       echo -n 'N'
     else
       echo -n 'X'
@@ -47,13 +36,27 @@ deb_check_file() {
 }
 export -f deb_check_file
 
-sp="|\-/" s=1 E_f=0; X_f=0 SECONDS=0
-while IFS= read -r -n1 char; do
- [[ $char == "X" ]] && X_f=$((X_f+1))
- [[ $char == "E" ]] && E_f=$((E_f+1))
- [[ $char == "N" ]] && N_f=$((N_f+1))
- [[ $char == "!" ]] && echo "Someting went wrong!"
- time=$SECONDS
- echo -ne "\e[2KProgress:$((count-N_f))[${sp:(i++)*s%${#sp}:s}]:$3; X:$((X_f)); E:$((E_f)); N:$((N_f)). $((time/60)) Min $((time%60)) Sec elapsed.\r"
-done < <(< "$file_hashes" xargs -I {} -n 1 -P "$threads" bash -c 'deb_check_file "$@"' _ {})
-echo -e "\nComplete! Have a nice day!"
+function check_by_hash() {
+
+  local count sp="|\-/" s=1 N_f=0 X_f=0 E_f=0
+  SECONDS=0
+  count=$(< "$2" wc -l)
+  echo "Files to check ($1): $count"
+  while IFS= read -r -n1 char; do
+    [[ $char == "N" ]] && N_f=$((N_f+1))
+    [[ $char == "X" ]] && X_f=$((X_f+1))
+    [[ $char == "E" ]] && E_f=$((E_f+1))
+    time=$SECONDS
+    echo -ne "\e[2K[${sp:(i++)*s%${#sp}:s}] Progress: $((count-N_f)) left.; X:$((X_f)); E:$((E_f)); N:$((N_f)). $((time/60)) Min $((time%60)) Sec elapsed.\r"
+  done < <(< "$2" $parallel_command -I {} -n 1 -P "$threads" bash -c "CHECK_COMMAND=$1 deb_check_file \"\$@\"" _ {})
+  echo -e "\nComplete!"
+}
+
+check_by_hash sha256sum "$mirror_path/var/BUGGY_SHA256"
+check_by_hash md5sum "$mirror_path/var/MD5"
+[[ -f "$mirror_path/mirror/download_X.sh" ]] && "Script for re-downloading files with incorrect signature: $mirror_path/mirror/download_X.sh"
+[[ -f "$mirror_path/mirror/download_E.sh" ]] && "Script for downloading non-existing files: $mirror_path/mirror/download_E.sh"
+
+# =)
+echo "Script succesfully ended its work. Have a nice day!"
+exit 0
