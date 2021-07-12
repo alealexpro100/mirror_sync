@@ -1,6 +1,5 @@
 #!/usr/bin/perl
-#https://raw.githubusercontent.com/josbraden/apt-mirror/master/apt-mirror
-# with fix on 523 and 1019 lines
+#based on https://raw.githubusercontent.com/Stifler6996/apt-mirror/master/apt-mirror
 =pod
 
 =head1 NAME
@@ -134,8 +133,7 @@ my %clean_directory = ();
 ######################################################################################
 ## Setting up $config_file variable
 
-
-$config_file = "/etc/apt/mirror.list";
+$config_file = "/etc/apt/mirror.list";    # Default value
 GetOptions ('config=s' => \$config_file); #CHANGED
 if ( $_ = shift )
 {
@@ -292,7 +290,7 @@ sub download_urls
 
 sub parse_config_line
 {
-    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]+(?<components>.+)$/;
+    my $pattern_deb_line = qr/^[\t ]*(?<type>deb-src|deb)(?:-(?<arch>[\w\-]+))?[\t ]+(?:\[(?<options>[^\]]+)\][\t ]+)?(?<uri>[^\s]+)[\t ]?(?<components>.*)$/;
     my $line = $_;
     my %config;
     if ( $line =~ $pattern_deb_line ) {
@@ -415,6 +413,7 @@ foreach (@config_sources)
     }
     else
     {
+        add_url_to_download( $uri . "/$distribution/InRelease" );
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
         add_url_to_download( $uri . "/$distribution/Sources.gz" );
@@ -449,19 +448,34 @@ foreach (@config_binaries)
                 add_url_to_download( $url . $_ . "/Contents-" . $arch . ".xz" );
             }
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Release" );
+            add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.gz" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.bz2" );
             add_url_to_download( $url . $_ . "/binary-" . $arch . "/Packages.xz" );
             add_url_to_download( $url . $_ . "/i18n/Index" );
+            add_url_to_download( $url . $_ . "/cnf/Commands-" . $arch . ".xz" );
+            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.gz" );
+            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.bz2" );
+            add_url_to_download( $url . $_ . "/debian-installer/binary-" . $arch . "/Packages.xz" );
         }
     }
-    else
+    elsif ($distribution)
     {
+        add_url_to_download( $uri . "/$distribution/InRelease" );
         add_url_to_download( $uri . "/$distribution/Release" );
         add_url_to_download( $uri . "/$distribution/Release.gpg" );
+        add_url_to_download( $uri . "/$distribution/Packages" );
         add_url_to_download( $uri . "/$distribution/Packages.gz" );
         add_url_to_download( $uri . "/$distribution/Packages.bz2" );
         add_url_to_download( $uri . "/$distribution/Packages.xz" );
+    }
+    else
+    {
+        add_url_to_download( $uri . "/Release" );
+        add_url_to_download( $uri . "/Release.gpg" );
+        add_url_to_download( $uri . "/Packages.gz" );
+        add_url_to_download( $uri . "/Packages.bz2" );
+        add_url_to_download( $uri . "/Packages.xz" );
     }
 }
 
@@ -488,6 +502,8 @@ sub sanitise_uri
 {
     my $uri = shift;
     $uri =~ s[^(\w+)://][];
+    #$uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    $uri =~ s/^([^@]+)?@?// if (split '/',$uri)[0] =~ /@/;
     $uri =~ s&:\d+/&/&;                       # and port information
     $uri =~ s/~/\%7E/g if get_variable("_tilde");
     return $uri;
@@ -523,7 +539,7 @@ sub find_translation_files_in_release
                 if ( @parts == 3 )
                 {
                     my ( $sha1, $size, $filename ) = @parts;
-                     if ( $filename =~ m{^$component/i18n/Translation-[^./]*.(bz2||xz||gz)$} )
+                    if ( $filename =~ m{^$component/i18n/Translation-[^./]*\.(bz2||xz||gz)$} )
                     {
                         add_url_to_download( $dist_uri . $filename, $size );
                     }
@@ -669,7 +685,7 @@ sub find_dep11_files_in_release
                 if ( @parts == 3 )
                 {
                     my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/dep11/(Components-${arch}\.yml|icons-[^./]+\.tar)\.(gz|bz2|xz)$} )
+                    if ( $filename =~ m{^$component/dep11/(Components-${arch}\.yml|icons-(.*)+\.tar)\.(gz|bz2|xz)$} )
                     {
                         add_url_to_download( $dist_uri . $filename, $size );
                     }
@@ -725,193 +741,13 @@ foreach ( keys %urls_to_download )
 }
 
 ######################################################################################
-## cnf directory download
-
-%urls_to_download = ();
-
-sub find_cnf_files_in_release
-{
-    # Look in the dists/$DIST/Release file for the cnf files that belong
-    # to the given component and architecture.
-
-    my $dist_uri  = shift;
-    my $component = shift;
-    my $arch      = shift;
-    my ( $release_uri, $release_path, $line ) = '';
-
-    $release_uri  = $dist_uri . "Release";
-    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
-
-    unless ( open STREAM, "<$release_path" )
-    {
-        warn( "Failed to open Release file from " . $release_uri );
-        return;
-    }
-
-    my $checksums = 0;
-    while ( $line = <STREAM> )
-    {
-        chomp $line;
-        if ($checksums)
-        {
-            if ( $line =~ /^ +(.*)$/ )
-            {
-                my @parts = split( / +/, $1 );
-                if ( @parts == 3 )
-                {
-                    my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/cnf/(Commands-${arch}(\.(gz|bz2|xz))?)$} )
-                    {
-                        add_url_to_download( $dist_uri . $filename, $size );
-                    }
-                }
-                else
-                {
-                    warn("Malformed checksum line \"$1\" in $release_uri");
-                }
-            }
-            else
-            {
-                $checksums = 0;
-            }
-        }
-        if ( not $checksums )
-        {
-            if ( $line eq "SHA256:" )
-            {
-                $checksums = 1;
-            }
-        }
-    }
-}
-
-print "Processing cnf indexes: [";
-
-foreach (@config_binaries)
-{
-    my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "C";
-    if (@components)
-    {
-        $url = $uri . "/dists/" . $distribution . "/";
-
-        my $component;
-        foreach $component (@components)
-        {
-            find_cnf_files_in_release( $url, $component, $arch );
-        }
-    }
-}
-
-print "]\n\n";
-
-push( @index_urls, sort keys %urls_to_download );
-download_urls( "cnf", sort keys %urls_to_download );
-
-foreach ( keys %urls_to_download )
-{
-    s[^(\w+)://][];
-    s[~][%7E]g if get_variable("_tilde");
-    $skipclean{$_} = 1;
-}
-
-######################################################################################
-## debian-installer directory download
-
-%urls_to_download = ();
-
-sub find_debian_files_in_release
-{
-    # Look in the dists/$DIST/Release file for the debian-installer files that belong
-    # to the given component and architecture.
-
-    my $dist_uri  = shift;
-    my $component = shift;
-    my $arch      = shift;
-    my ( $release_uri, $release_path, $line ) = '';
-
-    $release_uri  = $dist_uri . "Release";
-    $release_path = get_variable("skel_path") . "/" . sanitise_uri($release_uri);
-
-    unless ( open STREAM, "<$release_path" )
-    {
-        warn( "Failed to open Release file from " . $release_uri );
-        return;
-    }
-
-    my $checksums = 0;
-    while ( $line = <STREAM> )
-    {
-        chomp $line;
-        if ($checksums)
-        {
-            if ( $line =~ /^ +(.*)$/ )
-            {
-                my @parts = split( / +/, $1 );
-                if ( @parts == 3 )
-                {
-                    my ( $sha1, $size, $filename ) = @parts;
-                    if ( $filename =~ m{^$component/debian-installer/(binary-${arch})/Packages(\.(gz|bz2|xz))?$} )
-                    {
-                        add_url_to_download( $dist_uri . $filename, $size );
-                    }
-                }
-                else
-                {
-                    warn("Malformed checksum line \"$1\" in $release_uri");
-                }
-            }
-            else
-            {
-                $checksums = 0;
-            }
-        }
-        if ( not $checksums )
-        {
-            if ( $line eq "SHA256:" )
-            {
-                $checksums = 1;
-            }
-        }
-    }
-}
-
-print "Processing debian-installer: [";
-
-foreach (@config_binaries)
-{
-    my ( $arch, $uri, $distribution, @components ) = @{$_};
-    print "D";
-    if (@components)
-    {
-        $url = $uri . "/dists/" . $distribution . "/";
-
-        my $component;
-        foreach $component (@components)
-        {
-            find_debian_files_in_release( $url, $component, $arch );
-        }
-    }
-}
-
-print "]\n\n";
-
-push( @index_urls, sort keys %urls_to_download );
-download_urls( "debian-installer", sort keys %urls_to_download );
-
-foreach ( keys %urls_to_download )
-{
-    s[^(\w+)://][];
-    s[~][%7E]g if get_variable("_tilde");
-    $skipclean{$_} = 1;
-}
-
-######################################################################################
 ## Main download preparations
 
 %urls_to_download = ();
 
 open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
+open FILES_BUGGY, ">" . get_variable("var_path") . "/BUGGY" or die("apt-mirror: can't write to intermediate file (BUGGY)");
+open FILES_BUGGY_SHA256, ">" . get_variable("var_path") . "/BUGGY_SHA256" or die("apt-mirror: can't write to intermediate file (BUGGY_SHA256)");
 open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
 open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
 open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
@@ -1009,9 +845,25 @@ sub process_index
                 add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
             }
         }
-        else
+        elsif ( exists $lines{"Files:"} )
         {    # Sources index
-            # https://github.com/apt-mirror/apt-mirror/issues/117 Dirty fix
+            foreach ( split( /\n/, $lines{"Files:"} ) )
+            {
+                next if $_ eq '';
+                my @file = split;
+                die("apt-mirror: invalid Sources format") if @file != 3;
+                $skipclean{ remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) } = 1;
+                print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
+                print FILES_MD5 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
+                if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
+                {
+                    print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
+                    add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
+                }
+            }
+        }
+        else
+        {    # Sources index (SHA256)
             foreach ( split( /\n/, $lines{"Checksums-Sha256:"} ) )
             {
                 next if $_ eq '';
@@ -1019,6 +871,8 @@ sub process_index
                 die("apt-mirror: invalid Sources format") if @file != 3;
                 $skipclean{ remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) } = 1;
                 print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
+                print FILES_BUGGY remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
+                print FILES_BUGGY_SHA256 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
                 print FILES_SHA256 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
                 if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
                 {
@@ -1064,9 +918,13 @@ foreach (@config_binaries)
             process_index( $uri, "/dists/$distribution/$component/binary-$arch/Packages" );
         }
     }
-    else
+    elsif ($distribution)
     {
         process_index( $uri, "/$distribution/Packages" );
+    }
+    else
+    {
+        process_index( $uri, "/Packages" );
     }
 }
 
@@ -1075,6 +933,8 @@ clear_stat_cache();
 print "]\n\n";
 
 close FILES_ALL;
+close FILES_BUGGY;
+close FILES_BUGGY_SHA256;
 close FILES_NEW;
 close FILES_MD5;
 close FILES_SHA1;
