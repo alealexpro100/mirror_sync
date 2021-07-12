@@ -37,14 +37,14 @@ mirror='https://deb.debian.org/debian'
 s_mirror='http://security.debian.org'
 clean="$clean\nclean $mirror\nclean $s_mirror"
 echo_d -e "\n# DEBIAN"
-for version in '#oldstable' stable '#testing' '#stretch' buster '#bullseye' sid; do
+for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free contrib"
 		[[ $version != sid ]] && echo_d "deb-$arch $mirror ${version}-updates main non-free contrib"
-		[[ $version != testing && $version != sid ]] && echo_d "deb-$arch $mirror ${version}-backports main non-free contrib"
-		[[ $version != testing && $version != sid ]] && echo_d "deb-$arch $s_mirror ${version}/updates main non-free contrib"
-		[[ $version == testing ]] && echo_d "deb-$arch $s_mirror testing-security main non-free contrib"
+		[[ $version != testing && $version != bullseye && $version != sid ]] && echo_d "deb-$arch $mirror ${version}-backports main non-free contrib"
+		[[ $version != testing && $version != bullseye && $version != sid ]] && echo_d "deb-$arch $s_mirror ${version}/updates main non-free contrib"
+		[[ $version == testing || $version == bullseye ]] && echo_d "deb-$arch $s_mirror ${version}-security main non-free contrib"
 	done
 	echo_d ''
 done
@@ -53,11 +53,11 @@ arch=''; version=''
 mirror='https://www.deb-multimedia.org'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# DEBIAN MULTIMEDIA"
-for version in '#oldstable' stable '#testing' '#stretch' buster '#bullseye' sid; do
+for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free"
-		[[ $version != testing && $version != sid && $arch != src ]] && echo_d "deb-$arch $mirror ${version}-backports main"
+		[[ $version != testing && $version != bullseye && $version != sid && $arch != src ]] && echo_d "deb-$arch $mirror ${version}-backports main"
 	done
 	echo_d ''
 done
@@ -66,7 +66,7 @@ arch=''; version=''
 mirror='https://dl.winehq.org/wine-builds/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# WINE"
-for version in '#oldstable' stable '#testing' '#stretch' buster '#bullseye' sid; do
+for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		[[ $version != sid || $arch != src ]] && echo_d "deb-$arch $mirror ${version} main"
@@ -85,7 +85,7 @@ done
 arch=''; version=''
 mirror='https://repo.antixlinux.com'
 echo_d -e "\n# ANTIX (Based on debian)"
-for version in '#stretch' buster sid; do
+for version in '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror/$version ${version} main nosystemd nonfree"
@@ -98,7 +98,7 @@ arch=''; version=''
 mirror='http://mxrepo.com/mx/repo'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# MX-PACKAGES (stable)"
-for version in '#stretch' buster; do
+for version in '#stretch' buster bullseye; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main non-free ahs"
@@ -110,7 +110,7 @@ arch=''; version=''
 mirror='https://liquorix.net/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# ZEN KERNEL (liquorix)"
-for version in '#oldstable' stable '#testing' '#stretch' buster '#bullseye' sid; do
+for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -122,7 +122,7 @@ arch=''; version=''
 mirror='https://deb.opera.com/opera'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# OPERA"
-for version in stable '#testing' sid; do
+for version in stable testing sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386; do
 		echo_d "deb-$arch $mirror ${version} non-free"
@@ -168,7 +168,7 @@ arch=''; version=''
 mirror='https://apt.armbian.com'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# ARMBIAN"
-for version in '#focal' buster; do
+for version in '#focal' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in arm64 armhf; do
 		echo_d "deb-$arch $mirror ${version} main $version-utils $version-desktop"
@@ -221,11 +221,16 @@ for version in '#xenial' '#focal'; do
 	echo_d ''
 done
 
-arch=''; version='buster'
+
+arch=''; version=''
 mirror='http://download.proxmox.com/debian/pve'
 clean="$clean\nclean http://download.proxmox.com/debian/pve"
 echo_d -e "\n# PROXMOX"
-echo_d -e "deb-amd64 $mirror $version pve-no-subscription pvetest"
+for version in '#stretch' buster bullseye; do
+	echo_d -e "# -- $version"
+	echo_d "deb-amd64 $mirror ${version} pve-no-subscription pvetest"
+	echo_d ''
+done
 
 echo -e "\n$clean"
 
