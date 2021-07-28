@@ -54,8 +54,8 @@ function check_by_hash() {
 
 check_by_hash sha256sum "$mirror_path/var/BUGGY_SHA256"
 check_by_hash md5sum "$mirror_path/var/MD5"
-[[ -f "$mirror_path/mirror/download_X.sh" ]] && "Script for re-downloading files with incorrect signature: $mirror_path/mirror/download_X.sh"
-[[ -f "$mirror_path/mirror/download_E.sh" ]] && "Script for downloading non-existing files: $mirror_path/mirror/download_E.sh"
+[[ -f "$mirror_path/mirror/download_X.sh" ]] && echo -e "Script for re-downloading files with incorrect signature: $mirror_path/mirror/download_X.sh"
+[[ -f "$mirror_path/mirror/download_E.sh" ]] && echo -e "Script for downloading non-existing files: $mirror_path/mirror/download_E.sh"
 
 # =)
 echo "Script succesfully ended its work. Have a nice day!"

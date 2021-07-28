@@ -16,7 +16,7 @@ ARCH_SOURCE_MIRROR="rsync://mirrors.kernel.org/archlinux/sources"
 ARCH32_MIRROR="rsync://mirror.archlinux32.org/archlinux32"
 ARTIX_MIRROR="rsync://universe.artixlinux.org/repos"
 ARTIX_UNIVERSE_MIRROR="rsync://universe.artixlinux.org/universe"
-#ARCHARM_MIRROR="rsync://de3.mirror.archlinuxarm.org/archlinux-arm"
+ARCHARM_MIRROR="rsync://mirrors.dotsrc.org/archlinuxarm"
 BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
 ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux"
@@ -32,21 +32,21 @@ function mirror_rsync() {
     if command -v rsync &> /dev/null; then
         echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
         [[ -d "${*: -1}" ]] || mkdir -p "${*: -1}"
-        rsync --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@"
+        rsync --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}!"
         echo -e "}\n"
     fi
 }
 
 function git_update() {
-    repo_name="$*"
-    repo="$(echo "$repo_name" | cut -d' ' -f1)"
-    name="$(echo "$repo_name" | cut -d' ' -f2)"
+    IFS=" " read -r -a repo_name <<< "$*"
+    repo="${repo_name[0]}"
+    name="${repo_name[1]}"
     echo " [Git update $name to $REPOS_DIR/$name...]"
     if [[ -d "$REPOS_DIR/$name/.git" ]]; then
-        git -C "$REPOS_DIR/$name" pull origin master --rebase
+        git -C "$REPOS_DIR/$name" pull origin master --rebase || echo "Failed to update $name!"
     else
         mkdir -p "$REPOS_DIR/$name"
-        git clone "$repo" "$REPOS_DIR/$name"
+        git clone "$repo" "$REPOS_DIR/$name" || echo "Failed to create $name!"
     fi
 }
 function git_update_list() {
@@ -58,42 +58,37 @@ function git_update_list() {
 cd "$MIRROR_DIR"
 
 if command -v git &> /dev/null; then
+    [[ -d "$REPOS_DIR" ]] || mkdir -p "$REPOS_DIR"
     git_update_list ./list.git/alpine
-    #git_update_list ./list.git/openwrt
+    git_update_list ./list.git/openwrt
 fi
 
 # --- ALPINELINUX MIRROR
-for al_arch in "x86_64" "x86" "aarch64" "armhf"; do
-    for al_ver in "v3.13" "v3.14" "edge"; do
-        for al_repo in "main" "community"; do
-            mirror_rsync $ALPINE_MIRROR/$al_ver/$al_repo/$al_arch/ alpine/$al_ver/$al_repo/$al_arch
-        done
-	[[ "$al_ver" == "edge" ]] && mirror_rsync $ALPINE_MIRROR/$al_ver/testing/$al_arch/ alpine/$al_ver/testing/$al_arch
-        [[ "$al_ver" != "edge" ]] && mirror_rsync $ALPINE_MIRROR/$al_ver/releases/$al_arch/ alpine/$al_ver/releases/$al_arch
-    done
-done
+mirror_rsync --exclude={"v3.[0-9]","v3.1[0-3]","edge/releases","*/*/armv7","*/*/mips64","*/*/ppc64le","*/*/riscv64","*/*/s390x"} $ALPINE_MIRROR/ alpine
 
 # --- ARCHLINUX MIRROR
+for al_repo in core extra community multilib; do
+    mirror_rsync $ARCH_MIRROR/$al_repo/ archlinux/$al_repo
+done
 for al_repo in core extra community; do
-    mirror_rsync $ARCH_MIRROR/$al_repo/os/x86_64/ archlinux/$al_repo/os/x86_64
-    mirror_rsync $ARCH32_MIRROR/i686/$al_repo/ archlinux/$al_repo/os/i686
+    mirror_rsync $ARCH32_MIRROR/i686/$al_repo/ archlinux32/i686/$al_repo
 done
-mirror_rsync $ARCH_MIRROR/multilib/os/x86_64/ archlinux/multilib/os/x86_64
-mirror_rsync $BLACKARCH_MIRROR/blackarch/os/x86_64/ archlinux/blackarch/os/x86_64
-mirror_rsync $ARCHCN_MIRROR/x86_64/ archlinux/archlinuxcn/os/x86_64
-mirror_rsync $ARCH32_MIRROR/archisos/ archlinux/archisos
-mirror_rsync $ARCH_SOURCE_MIRROR/ arch_sources
 for al_repo in system world galaxy lib32; do
-    mirror_rsync $ARTIX_MIRROR/$al_repo/os/x86_64/ archlinux/$al_repo/os/x86_64
+    mirror_rsync $ARTIX_MIRROR/$al_repo/ artix-linux/$al_repo/
 done
-mirror_rsync $ARTIX_UNIVERSE_MIRROR/x86_64/ archlinux/universe/os/x86_64
+mirror_rsync $ARTIX_UNIVERSE_MIRROR/ artix-linux/universe
+mirror_rsync --exclude="arm*/" $ARCHARM_MIRROR/ archlinux-arm
+mirror_rsync $BLACKARCH_MIRROR/blackarch/ blackarch
+mirror_rsync --exclude="arm*/" $ARCHCN_MIRROR/ archlinuxcn
+mirror_rsync $ARCH32_MIRROR/archisos/ archlinux32/archisos
+mirror_rsync $ARCH_SOURCE_MIRROR/ arch_sources
 
 
 # --- VOIDLINUX MIRROR
 for al_repo in "docs" "live/current" "logos" "static" "void-updates"; do
     mirror_rsync $VOID_MIRROR/$al_repo/ voidlinux/$al_repo
 done
-mirror_rsync --exclude "*.armv6l.xbps*" --exclude "*.armv7l.xbps*" --exclude "*.armv6l-musl.xbps*" --exclude "*.armv7l-musl.xbps*" --exclude "aarch64/debug*" --exclude "debug*" $VOID_MIRROR/current/ voidlinux/current
+mirror_rsync --exclude={"*.armv[6-7]l.xbps*","*.armv[6-7]l-musl.xbps*","aarch64/debug*","debug*"} $VOID_MIRROR/current/ voidlinux/current
 
 # --- ASTRALINUX MIRROR
 mirror_rsync $ASTRA_MIRROR/stable/orel/ astralinux/stable/orel
@@ -120,10 +115,12 @@ fi
 # --- CYGWIN MIRROR
 mirror_rsync $CYGWIN_MIRROR/ cygwin
 
+# --- OPENWRT MIRROR
+mirror_rsync --exclude={"releases/1[7-8].*","releases/19.07.0[1-6]","releases/19.07.0-rc[1-2]","releases/faillogs-1[7-8].*","releases/packages-1[7-8].*"} rsync://downloads.openwrt.org/downloads openwrt
 
 # --- ORACLELINUX 8 MIRROR
-if [[ "$ORACLE_MIRROR" == "1" && -f /usr/bin/reposync && -f oraclelinux/config.repo ]]; then
-  /usr/bin/reposync --bugfix --enhancement --newpackage --security --download-metadata --downloadcomps --remote-time --newest-only --delete --config oraclelinux/config.repo -p oraclelinux/mirror/
+if [[ "$ORACLE_MIRROR" == "1" && -f /usr/bin/reposync && -f "$WORK_DIR/oracle_config.repo" ]]; then
+  /usr/bin/reposync --bugfix --enhancement --newpackage --security --download-metadata --downloadcomps --remote-time --newest-only --delete --config "$WORK_DIR/oracle_config.repo" -p oraclelinux/
 fi
 
 # =)

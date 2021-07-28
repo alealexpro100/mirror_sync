@@ -3,7 +3,7 @@ Description=Sync offline mirror.
  
 [Service]
 Type=simple
-ExecStart=/usr/bin/bash -c "/mnt/mirror/projects/mirror_sync/mirror_sync.sh | tee -a /mnt/mirror/log.txt"
+ExecStart=/usr/bin/bash -c "/mnt/mirror/projects/mirror_sync/mirror_sync.sh | tee /mnt/mirror/log.txt"
 
 [Install]
 WantedBy=multi-user.target
