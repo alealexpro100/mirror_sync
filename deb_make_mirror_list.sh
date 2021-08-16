@@ -37,7 +37,7 @@ mirror='https://deb.debian.org/debian'
 s_mirror='http://security.debian.org'
 clean="$clean\nclean $mirror\nclean $s_mirror"
 echo_d -e "\n# DEBIAN"
-for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
+for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free contrib"
@@ -53,7 +53,7 @@ arch=''; version=''
 mirror='https://www.deb-multimedia.org'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# DEBIAN MULTIMEDIA"
-for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
+for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free"
@@ -66,7 +66,7 @@ arch=''; version=''
 mirror='https://dl.winehq.org/wine-builds/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# WINE"
-for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
+for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		[[ $version != sid || $arch != src ]] && echo_d "deb-$arch $mirror ${version} main"
@@ -110,7 +110,7 @@ arch=''; version=''
 mirror='https://liquorix.net/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# ZEN KERNEL (liquorix)"
-for version in '#oldstable' stable testing '#stretch' buster bullseye sid; do
+for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -133,7 +133,7 @@ arch=''; version=''
 mirror='https://download.virtualbox.org/virtualbox/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# VIRTUALBOX"
-for version in '#stretch' buster '#bullseye'; do
+for version in '#stretch' buster bullseye; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386; do
 		echo_d "deb-$arch $mirror ${version} contrib non-free"
