@@ -26,6 +26,7 @@ MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos"
 FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win"
 CYGWIN_MIRROR="rsync://mirrors.dotsrc.org/cygwin"
 OPENWRT_MIRROR="rsync://downloads.openwrt.org/downloads"
+TINYCORE_MIRROR="rsync://tinycorelinux.net/tc"
 APT_MIRROR="1" APT_MIRROR_FIX="0"
 ORACLE_MIRROR="1"
 
@@ -116,8 +117,11 @@ fi
 # --- CYGWIN MIRROR
 mirror_rsync $CYGWIN_MIRROR/ cygwin
 
+# --- TINYCORE MIRROR
+mirror_rsync --exclude={"[1-9].x","1[0-1].x"} $TINYCORE_MIRROR tinycore
+
 # --- OPENWRT MIRROR
-mirror_rsync --exclude={"releases/1[7-8].*","releases/19.07.[1-7]","releases/19.07.0-rc[1-2]","releases/21.02.0-rc[1-3]","releases/faillogs-1[7-8].*","releases/packages-1[7-8].*","snapshots"} $OPENWRT_MIRROR openwrt
+mirror_rsync --exclude={"releases/1[7-8].*","releases/19.07.[0-7]","releases/19.07.0-rc[1-2]","releases/21.02.0-rc[1-3]","releases/faillogs-1[7-8].*","releases/packages-1[7-8].*","snapshots"} $OPENWRT_MIRROR openwrt
 
 # --- ORACLELINUX 8 MIRROR
 if [[ "$ORACLE_MIRROR" == "1" && -f /usr/bin/reposync && -f "$WORK_DIR/oracle_config.repo" ]]; then
