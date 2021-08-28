@@ -42,9 +42,12 @@ for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	for arch in amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free contrib"
 		[[ $version != sid ]] && echo_d "deb-$arch $mirror ${version}-updates main non-free contrib"
-		[[ $version != testing && $version != bullseye && $version != sid ]] && echo_d "deb-$arch $mirror ${version}-backports main non-free contrib"
-		[[ $version != testing && $version != bullseye && $version != sid ]] && echo_d "deb-$arch $s_mirror ${version}/updates main non-free contrib"
-		[[ $version == testing || $version == bullseye ]] && echo_d "deb-$arch $s_mirror ${version}-security main non-free contrib"
+		[[ $version != sid ]] && echo_d "deb-$arch $mirror ${version}-backports main non-free contrib"
+		if [[ $version == oldoldstable || $version == oldstable || $version == stretch || $version == buster ]]; then
+			[[ $version != sid ]] && echo_d "deb-$arch $s_mirror ${version}/updates main non-free contrib"
+		else
+			[[ $version != sid ]] && echo_d "deb-$arch $s_mirror ${version}-security main non-free contrib"
+		fi
 	done
 	echo_d ''
 done
