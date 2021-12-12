@@ -40,7 +40,7 @@ function check_by_hash() {
 
   local count sp="|\-/" s=1 N_f=0 X_f=0 E_f=0
   SECONDS=0
-  count=$(< "$2" wc -l)
+  count=$(< "$2" sort -u | wc -l)
   echo "Files to check ($1): $count"
   while IFS= read -r -n1 char; do
     [[ $char == "N" ]] && N_f=$((N_f+1))
@@ -48,7 +48,7 @@ function check_by_hash() {
     [[ $char == "E" ]] && E_f=$((E_f+1))
     time=$SECONDS
     echo -ne "\e[2K[${sp:(i++)*s%${#sp}:s}] Progress: $((count-N_f)) left.; X:$((X_f)); E:$((E_f)); N:$((N_f)). $((time/60)) Min $((time%60)) Sec elapsed.\r"
-  done < <(< "$2" $parallel_command -I {} -n 1 -P "$threads" bash -c "CHECK_COMMAND=$1 deb_check_file \"\$@\"" _ {})
+  done < <(< "$2" sort -u | $parallel_command -I {} -n 1 -P "$threads" bash -c "CHECK_COMMAND=$1 deb_check_file \"\$@\"" _ {})
   echo -e "\nComplete!"
 }
 

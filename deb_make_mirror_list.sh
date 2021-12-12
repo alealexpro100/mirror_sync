@@ -39,14 +39,14 @@ clean="$clean\nclean $mirror\nclean $s_mirror"
 echo_d -e "\n# DEBIAN"
 for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
-	for arch in amd64 i386 arm64 armhf src; do
+	for arch in all amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free contrib"
-		[[ $version != sid ]] && echo_d "deb-$arch $mirror ${version}-updates main non-free contrib"
-		[[ $version != sid ]] && echo_d "deb-$arch $mirror ${version}-backports main non-free contrib"
+		[[ $version == sid ]] || echo_d "deb-$arch $mirror ${version}-updates main non-free contrib"
+		[[ $version == sid ]] || echo_d "deb-$arch $mirror ${version}-backports main non-free contrib"
 		if [[ $version == oldoldstable || $version == oldstable || $version == stretch || $version == buster ]]; then
-			[[ $version != sid ]] && echo_d "deb-$arch $s_mirror ${version}/updates main non-free contrib"
+			[[ $version == sid ]] || echo_d "deb-$arch $s_mirror ${version}/updates main non-free contrib"
 		else
-			[[ $version != sid ]] && echo_d "deb-$arch $s_mirror ${version}-security main non-free contrib"
+			[[ $version == sid ]] || echo_d "deb-$arch $s_mirror ${version}-security main non-free contrib"
 		fi
 	done
 	echo_d ''
@@ -58,9 +58,9 @@ clean="$clean\nclean $mirror"
 echo_d -e "\n# DEBIAN MULTIMEDIA"
 for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
-	for arch in amd64 i386 arm64 armhf src; do
+	for arch in all amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free"
-		[[ $version != testing && $version != bullseye && $version != sid && $arch != src ]] && echo_d "deb-$arch $mirror ${version}-backports main"
+		[[ $version == testing || $version == sid || $arch == src ]] || echo_d "deb-$arch $mirror ${version}-backports main"
 	done
 	echo_d ''
 done
@@ -71,8 +71,8 @@ clean="$clean\nclean $mirror"
 echo_d -e "\n# WINE"
 for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
-	for arch in amd64 i386 src; do
-		[[ $version != sid || $arch != src ]] && echo_d "deb-$arch $mirror ${version} main"
+	for arch in all amd64 i386 src; do
+		[[ ($version == sid && $arch == src) || ($version == oldstable && $arch == all) || ($version == buster && $arch == all) ]] || echo_d "deb-$arch $mirror ${version} main"
 	done
 	echo_d ''
 done
@@ -114,6 +114,17 @@ mirror='https://liquorix.net/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# ZEN KERNEL (liquorix)"
 for version in oldstable stable '#testing' '#stretch' buster bullseye sid; do
+	echo_d -e "# -- $version"
+	for arch in amd64 i386 src; do
+		echo_d "deb-$arch $mirror ${version} main"
+	done
+	echo_d ''
+done
+
+mirror='http://hwraid.le-vert.net/debian'
+clean="$clean\nclean $mirror"
+echo_d -e "\n# HWRAID repo"
+for version in '#stretch' buster bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main"

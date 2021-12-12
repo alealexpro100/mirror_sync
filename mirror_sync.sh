@@ -34,7 +34,7 @@ function mirror_rsync() {
     if command -v rsync &> /dev/null; then
         echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
         [[ -d "${*: -1}" ]] || mkdir -p "${*: -1}"
-        rsync --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}!"
+        rsync --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable --bwlimit=4096 "$@" || echo "Failed to rsync ${*: -1}!"
         echo -e "}\n"
     fi
 }
@@ -63,6 +63,7 @@ if command -v git &> /dev/null; then
     [[ -d "$REPOS_DIR" ]] || mkdir -p "$REPOS_DIR"
     git_update_list ./list.git/alpine
     git_update_list ./list.git/openwrt
+    git_update_list ./list.git/dietpi
 fi
 
 # --- ALPINELINUX MIRROR
@@ -93,7 +94,7 @@ done
 mirror_rsync --exclude={"*.armv[6-7]l.xbps*","*.armv[6-7]l-musl.xbps*","aarch64/debug*","debug*"} $VOID_MIRROR/current/ voidlinux/current
 
 # --- ASTRALINUX MIRROR
-mirror_rsync $ASTRA_MIRROR/stable/orel/ astralinux/stable/orel
+mirror_rsync --exclude={"frozen","stable/leningrad","stable/smolensk"} $ASTRA_MIRROR/ astralinux
 
 # --- MX-Linux ISO MIRROR
 mirror_rsync $MXISO_MIRROR/ MX-Linux/MX-ISOs
