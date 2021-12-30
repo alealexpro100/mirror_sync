@@ -11,6 +11,7 @@ declare -gx MIRROR_DIR="/mnt/mirror"
 declare -gx REPOS_DIR="$MIRROR_DIR/git"
 WORK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 ALPINE_MIRROR="rsync://mirrors.dotsrc.org/alpine"
+POSTMARKETOS_MIRROR="rsync://mirror.postmarketos.org/postmarketos"
 ARCH_MIRROR="rsync://mirrors.dotsrc.org/archlinux"
 ARCH_SOURCE_MIRROR="rsync://mirrors.kernel.org/archlinux/sources"
 ARCH32_MIRROR="rsync://mirror.archlinux32.org/archlinux32"
@@ -32,10 +33,14 @@ ORACLE_MIRROR="1"
 
 function mirror_rsync() {
     if command -v rsync &> /dev/null; then
-        echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
-        [[ -d "${*: -1}" ]] || mkdir -p "${*: -1}"
-        rsync --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable --bwlimit=4096 "$@" || echo "Failed to rsync ${*: -1}!"
-        echo -e "}\n"
+        if [[ "${*: -2:1}" == "/" ]]; then
+            echo " [Not found mirror link for ${*: -1}! Skipping...]"
+        else
+            echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
+            [[ -d "${*: -1}" ]] || mkdir -p "${*: -1}"
+            rsync --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable --bwlimit=4096 "$@" || echo "Failed to rsync ${*: -1}!"
+            echo -e "}\n"
+        fi
     fi
 }
 
@@ -68,6 +73,9 @@ fi
 
 # --- ALPINELINUX MIRROR
 mirror_rsync --exclude={"v3.[0-9]","v3.1[0-3]","edge/releases","*/*/armv7","*/*/mips64","*/*/ppc64le","*/*/riscv64","*/*/s390x"} $ALPINE_MIRROR/ alpine
+
+# --- POSTMARKETOS MIRROR
+mirror_rsync $POSTMARKETOS_MIRROR/ postmarketos
 
 # --- ARCHLINUX MIRROR
 for al_repo in core extra community multilib; do
