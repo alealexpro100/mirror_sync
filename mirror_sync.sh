@@ -22,6 +22,7 @@ BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
 ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux"
 ASTRA_MIRROR="rsync://download.astralinux.ru/astra/astra"
+#ALT_MIRROR="rsync://rsync.altlinux.org/ALTLinux"
 MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos"
 #FEDORA_MIRROR="rsync://mirrors.dotsrc.org/fedora-buffet"
 FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win"
@@ -38,7 +39,7 @@ function mirror_rsync() {
         else
             echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
             [[ -d "${*: -1}" ]] || mkdir -p "${*: -1}"
-            rsync --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable --bwlimit=4096 "$@" || echo "Failed to rsync ${*: -1}!"
+            rsync --contimeout=3 --timeout=20 --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}!"
             echo -e "}\n"
         fi
     fi
@@ -56,6 +57,7 @@ function git_update() {
         git clone "$repo" "$REPOS_DIR/$name" || echo "Failed to create $name!"
     fi
 }
+
 function git_update_list() {
     while IFS= read -r repo_name; do
         git_update "$repo_name"
@@ -66,9 +68,11 @@ cd "$MIRROR_DIR"
 
 if command -v git &> /dev/null; then
     [[ -d "$REPOS_DIR" ]] || mkdir -p "$REPOS_DIR"
-    git_update_list ./list.git/alpine
-    git_update_list ./list.git/openwrt
-    git_update_list ./list.git/dietpi
+    git_update_list "$WORK_DIR/list.git/alpine"
+    git_update_list "$WORK_DIR/list.git/dietpi"
+    git_update_list "$WORK_DIR/list.git/openwrt"
+    git_update_list "$WORK_DIR/list.git/postmarketos"
+    git_update_list "$WORK_DIR/list.git/void"
 fi
 
 # --- ALPINELINUX MIRROR
@@ -104,11 +108,17 @@ mirror_rsync --exclude={"*.armv[6-7]l.xbps*","*.armv[6-7]l-musl.xbps*","aarch64/
 # --- ASTRALINUX MIRROR
 mirror_rsync --exclude={"frozen","stable/leningrad","stable/smolensk"} $ASTRA_MIRROR/ astralinux
 
+# --- ALTLINUX MIRROR
+mirror_rsync --exclude={"[2-5].[0-4]","Daedalus","autoimports/p[7-9]","backports","c[6-8]","c8.[0-1]","c9f1","cert6","old","p[5-9]","t[6-7]","ports","updates","autoimports"} \
+    --exclude={"p10/images/*/*i586*","p10/images/*/*riscv64*","p10/images/*/*ppc64le*","p10/branch/i586","p10/branch/files/i586","p10/branch/ppc64le","p10/branch/files/ppc64le","p10/branch/armh","p10/branch/files/armh"} \
+    --exclude={"Sisyphus/i586","Sisyphus/files/i586","Sisyphus/ppc64le","Sisyphus/files/ppc64le","Sisyphus/armh","Sisyphus/files/armh"} \
+    $ALT_MIRROR/ altlinux
+
 # --- MX-Linux ISO MIRROR
 mirror_rsync $MXISO_MIRROR/ MX-Linux/MX-ISOs
 
 # --- FEDORA MIRROR
-#mirror_rsync --exclude "4*" --exclude "5*" --exclude "6*" --exclude "7*" --exclude "8.*" --exclude "testing*" $FEDORA_MIRROR fedora/fedora-epel
+mirror_rsync --exclude "4*" --exclude "5*" --exclude "6*" --exclude "7*" --exclude "8.*" --exclude "testing*" $FEDORA_MIRROR/ fedora/fedora-epel
 mirror_rsync --exclude "deprecated-isos*" $FEDORA_VIRTIO_MIRROR/ fedora/groups/virt/virtio-win
 
 # --- DEBIAN-BASED DISTROS MIRROR
@@ -127,10 +137,11 @@ fi
 mirror_rsync $CYGWIN_MIRROR/ cygwin
 
 # --- TINYCORE MIRROR
-mirror_rsync --exclude={"[1-9].x","1[0-1].x"} $TINYCORE_MIRROR tinycore
+# Ignore "www" directory because it causes IO error.
+mirror_rsync --exclude={"[1-9].x","1[0-1].x","www"} $TINYCORE_MIRROR tinycore
 
 # --- OPENWRT MIRROR
-mirror_rsync --exclude={"releases/1[7-8].*","releases/19.07.[0-7]","releases/19.07.0-rc[1-2]","releases/21.02.0-rc[1-3]","releases/faillogs-1[7-8].*","releases/packages-1[7-8].*","snapshots"} $OPENWRT_MIRROR openwrt
+mirror_rsync --bwlimit=4096 --exclude={"releases/1[7-9].*","releases/21.02.0","releases/21.02.0-rc[1-4]","releases/faillogs-1[7-9].*","releases/packages-1[7-9].*"} $OPENWRT_MIRROR openwrt
 
 # --- ORACLELINUX 8 MIRROR
 if [[ "$ORACLE_MIRROR" == "1" && -f /usr/bin/reposync && -f "$WORK_DIR/oracle_config.repo" ]]; then
