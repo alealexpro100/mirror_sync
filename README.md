@@ -13,7 +13,8 @@ Supported mirrors:
 * Openwrt
 * Tinycore linux
 * Cygwin
+* Mikrotik
 
 ## Usage
 * link `.service` and `.timer` to systemd service files.
-* Activate `offline_mirror.timer` in 
+* Activate `offline_mirror.timer` in in your system.

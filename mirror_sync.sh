@@ -12,8 +12,10 @@ declare -gx REPOS_DIR="$MIRROR_DIR/git"
 WORK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 ALPINE_MIRROR="rsync://mirrors.dotsrc.org/alpine"
 POSTMARKETOS_MIRROR="rsync://mirror.postmarketos.org/postmarketos"
+#POSTMARKETOS_IMAGES_MIRROR="rsync://mirror.postmarketos.org/images"
 ARCH_MIRROR="rsync://mirrors.dotsrc.org/archlinux"
 ARCH_SOURCE_MIRROR="rsync://mirrors.kernel.org/archlinux/sources"
+MANJARO_MIRROR="rsync://mirror.truenetwork.ru/manjaro"
 ARCH32_MIRROR="rsync://mirror.archlinux32.org/archlinux32"
 ARTIX_MIRROR="rsync://universe.artixlinux.org/repos"
 ARTIX_UNIVERSE_MIRROR="rsync://universe.artixlinux.org/universe"
@@ -21,24 +23,27 @@ ARCHARM_MIRROR="rsync://mirrors.dotsrc.org/archlinuxarm"
 BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
 ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux"
-ASTRA_MIRROR="rsync://download.astralinux.ru/astra/astra"
+#ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
+ASTRA_MIRROR="rsync://mirror.yandex.ru/astra"
 #ALT_MIRROR="rsync://rsync.altlinux.org/ALTLinux"
 MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos"
+FDROID_MIRROR="rsync://mirrors.dotsrc.org/fdroid"
 #FEDORA_MIRROR="rsync://mirrors.dotsrc.org/fedora-buffet"
 FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win"
 CYGWIN_MIRROR="rsync://mirrors.dotsrc.org/cygwin"
-OPENWRT_MIRROR="rsync://downloads.openwrt.org/downloads"
+OPENWRT_MIRROR="rsync://openwrt.tetaneutral.net/openwrt"
+HAIKU_MIRROR="rsync://mirror.rit.edu/haiku"
 TINYCORE_MIRROR="rsync://tinycorelinux.net/tc"
 APT_MIRROR="1" APT_MIRROR_FIX="0"
 ORACLE_MIRROR="1"
 
 function mirror_rsync() {
     if command -v rsync &> /dev/null; then
-        if [[ "${*: -2:1}" == "/" ]]; then
+        if [[ ! "${*: -2:1}" =~ "rsync://" ]]; then
             echo " [Not found mirror link for ${*: -1}! Skipping...]"
         else
             echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
-            [[ -d "${*: -1}" ]] || mkdir -p "${*: -1}"
+            [[ "$RSYNC_FILE" == "1" || -d "${*: -1}" ]] || mkdir -p "${*: -1}"
             rsync --contimeout=3 --timeout=20 --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}!"
             echo -e "}\n"
         fi
@@ -66,6 +71,8 @@ function git_update_list() {
 
 cd "$MIRROR_DIR"
 
+bash "$WORK_DIR/mikrotik.sh"
+
 if command -v git &> /dev/null; then
     [[ -d "$REPOS_DIR" ]] || mkdir -p "$REPOS_DIR"
     git_update_list "$WORK_DIR/list.git/alpine"
@@ -73,31 +80,26 @@ if command -v git &> /dev/null; then
     git_update_list "$WORK_DIR/list.git/openwrt"
     git_update_list "$WORK_DIR/list.git/postmarketos"
     git_update_list "$WORK_DIR/list.git/void"
+    git_update_list "$WORK_DIR/list.git/various"
 fi
 
 # --- ALPINELINUX MIRROR
 mirror_rsync --exclude={"v3.[0-9]","v3.1[0-3]","edge/releases","*/*/armv7","*/*/mips64","*/*/ppc64le","*/*/riscv64","*/*/s390x"} $ALPINE_MIRROR/ alpine
 
 # --- POSTMARKETOS MIRROR
-mirror_rsync $POSTMARKETOS_MIRROR/ postmarketos
+mirror_rsync $POSTMARKETOS_MIRROR/ postmarketos/postmarketos
+mirror_rsync $POSTMARKETOS_IMAGES_MIRROR/ postmarketos/images
 
-# --- ARCHLINUX MIRROR
-for al_repo in core extra community multilib; do
-    mirror_rsync $ARCH_MIRROR/$al_repo/ archlinux/$al_repo
-done
-for al_repo in core extra community; do
-    mirror_rsync $ARCH32_MIRROR/i686/$al_repo/ archlinux32/i686/$al_repo
-done
-for al_repo in system world galaxy lib32; do
-    mirror_rsync $ARTIX_MIRROR/$al_repo/ artix-linux/$al_repo/
-done
-mirror_rsync $ARTIX_UNIVERSE_MIRROR/ artix-linux/universe
-mirror_rsync --exclude="arm*/" $ARCHARM_MIRROR/ archlinux-arm
-mirror_rsync $BLACKARCH_MIRROR/blackarch/ blackarch
-mirror_rsync --exclude="arm*/" $ARCHCN_MIRROR/ archlinuxcn
-mirror_rsync $ARCH32_MIRROR/archisos/ archlinux32/archisos
+# --- ARCH-BASED MIRROR
+mirror_rsync $ARCH_MIRROR/ archlinux
 mirror_rsync $ARCH_SOURCE_MIRROR/ arch_sources
-
+mirror_rsync --exclude="arm*/" $ARCHARM_MIRROR/ archlinux-arm
+mirror_rsync $BLACKARCH_MIRROR/ blackarch
+mirror_rsync --exclude="arm*/" $ARCHCN_MIRROR/ archlinuxcn
+mirror_rsync $ARCH32_MIRROR/ archlinux32
+mirror_rsync $ARTIX_MIRROR/ artix-linux/repos
+mirror_rsync $ARTIX_UNIVERSE_MIRROR/ artix-linux/universe
+mirror_rsync $MANJARO_MIRROR/ manjaro
 
 # --- VOIDLINUX MIRROR
 for al_repo in "docs" "live/current" "logos" "static" "void-updates"; do
@@ -106,7 +108,9 @@ done
 mirror_rsync --exclude={"*.armv[6-7]l.xbps*","*.armv[6-7]l-musl.xbps*","aarch64/debug*","debug*"} $VOID_MIRROR/current/ voidlinux/current
 
 # --- ASTRALINUX MIRROR
-mirror_rsync --exclude={"frozen","stable/leningrad","stable/smolensk"} $ASTRA_MIRROR/ astralinux
+RSYNC_FILE=1 mirror_rsync $ASTRA_MIRROR/README-ASTRA.txt astra/README-ASTRA.txt
+mirror_rsync --exclude={"leningrad","smolensk"} $ASTRA_MIRROR/stable/ astra/stable
+mirror_rsync $ASTRA_MIRROR/testing/ astra/testing
 
 # --- ALTLINUX MIRROR
 mirror_rsync --exclude={"[2-5].[0-4]","Daedalus","autoimports/p[7-9]","backports","c[6-8]","c8.[0-1]","c9f1","cert6","old","p[5-9]","t[6-7]","ports","updates","autoimports"} \
@@ -116,6 +120,9 @@ mirror_rsync --exclude={"[2-5].[0-4]","Daedalus","autoimports/p[7-9]","backports
 
 # --- MX-Linux ISO MIRROR
 mirror_rsync $MXISO_MIRROR/ MX-Linux/MX-ISOs
+
+# --- F-Droid MIRROR
+mirror_rsync --exclude="archive" $FDROID_MIRROR/ fdroid
 
 # --- FEDORA MIRROR
 mirror_rsync --exclude "4*" --exclude "5*" --exclude "6*" --exclude "7*" --exclude "8.*" --exclude "testing*" $FEDORA_MIRROR/ fedora/fedora-epel
@@ -138,10 +145,13 @@ mirror_rsync $CYGWIN_MIRROR/ cygwin
 
 # --- TINYCORE MIRROR
 # Ignore "www" directory because it causes IO error.
-mirror_rsync --exclude={"[1-9].x","1[0-1].x","www"} $TINYCORE_MIRROR tinycore
+mirror_rsync --exclude={"[1-9].x","1[0-1].x","www"} $TINYCORE_MIRROR/ tinycore
 
 # --- OPENWRT MIRROR
-mirror_rsync --bwlimit=4096 --exclude={"releases/1[7-9].*","releases/21.02.0","releases/21.02.0-rc[1-4]","releases/faillogs-1[7-9].*","releases/packages-1[7-9].*"} $OPENWRT_MIRROR openwrt
+mirror_rsync --exclude={"releases/1[7-9].*","releases/21.02.0-rc[1-4]","releases/faillogs-1[7-9].*","releases/packages-1[7-9].*"} $OPENWRT_MIRROR openwrt
+
+# --- HAIKU MIRROR
+mirror_rsync $HAIKU_MIRROR/ haiku
 
 # --- ORACLELINUX 8 MIRROR
 if [[ "$ORACLE_MIRROR" == "1" && -f /usr/bin/reposync && -f "$WORK_DIR/oracle_config.repo" ]]; then

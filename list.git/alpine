@@ -10,7 +10,7 @@ https://gitlab.alpinelinux.org/alpine/infra/compose/alpine-mirror-sync.git gitla
 https://gitlab.alpinelinux.org/alpine/infra/compose/aports-qa-bot.git gitlab.alpinelinux.org/alpine/infra/compose/aports-qa-bot.git
 https://gitlab.alpinelinux.org/alpine/infra/compose/appstream-generator.git gitlab.alpinelinux.org/alpine/infra/compose/appstream-generator.git
 https://gitlab.alpinelinux.org/alpine/infra/compose/cgit.git gitlab.alpinelinux.org/alpine/infra/compose/cgit.git
-https://gitlab.alpinelinux.org/alpine/infra/compose/gitlab-acceptance-test.git gitlab.alpinelinux.org/alpine/infra/compose/gitlab-acceptance-test.git
+https://gitlab.alpinelinux.org/alpine/infra/compose/gitlab-acceptance-tests.git gitlab.alpinelinux.org/alpine/infra/compose/gitlab-acceptance-tests.git
 https://gitlab.alpinelinux.org/alpine/infra/compose/gitlab-inbound-email.git gitlab.alpinelinux.org/alpine/infra/compose/gitlab-inbound-email.git
 https://gitlab.alpinelinux.org/alpine/infra/compose/gitlab-runner-alpine-ci.git gitlab.alpinelinux.org/alpine/infra/compose/gitlab-runner-alpine-ci.git
 https://gitlab.alpinelinux.org/alpine/infra/compose/mailman.git gitlab.alpinelinux.org/alpine/infra/compose/mailman.git
