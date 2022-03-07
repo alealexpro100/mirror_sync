@@ -124,7 +124,7 @@ done
 mirror='http://hwraid.le-vert.net/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# HWRAID repo"
-for version in '#stretch' buster bullseye sid; do
+for version in '#stretch' buster bullseye; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -151,6 +151,17 @@ for version in '#stretch' buster bullseye; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386; do
 		echo_d "deb-$arch $mirror ${version} contrib non-free"
+	done
+done
+
+arch=''; version=''
+mirror='https://download.onlyoffice.com/repo/debian'
+clean="$clean\nclean $mirror"
+echo_d -e "\n# ONLYOFFICE"
+for version in squeeze; do
+	echo_d -e "# -- $version"
+	for arch in amd64 i386; do
+		echo_d "deb-$arch $mirror ${version} main"
 	done
 done
 

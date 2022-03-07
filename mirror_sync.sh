@@ -21,6 +21,7 @@ ARTIX_MIRROR="rsync://universe.artixlinux.org/repos"
 ARTIX_UNIVERSE_MIRROR="rsync://universe.artixlinux.org/universe"
 ARCHARM_MIRROR="rsync://mirrors.dotsrc.org/archlinuxarm"
 BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
+MIRROR_CHAOTIC_AUR="rsync://builds.garudalinux.org/chaotic/chaotic-aur"
 ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux"
 #ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
@@ -30,6 +31,8 @@ MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos"
 FDROID_MIRROR="rsync://mirrors.dotsrc.org/fdroid"
 #FEDORA_MIRROR="rsync://mirrors.dotsrc.org/fedora-buffet"
 FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win"
+APACHE_MIRROR="rsync://mirrors.dotsrc.org/apache"
+MYSQL_MIRROR="rsync://mirrors.dotsrc.org/mysql"
 CYGWIN_MIRROR="rsync://mirrors.dotsrc.org/cygwin"
 OPENWRT_MIRROR="rsync://openwrt.tetaneutral.net/openwrt"
 HAIKU_MIRROR="rsync://mirror.rit.edu/haiku"
@@ -95,6 +98,7 @@ mirror_rsync $ARCH_MIRROR/ archlinux
 mirror_rsync $ARCH_SOURCE_MIRROR/ arch_sources
 mirror_rsync --exclude="arm*/" $ARCHARM_MIRROR/ archlinux-arm
 mirror_rsync $BLACKARCH_MIRROR/ blackarch
+mirror_rsync $MIRROR_CHAOTIC_AUR/ chaotic-aur
 mirror_rsync --exclude="arm*/" $ARCHCN_MIRROR/ archlinuxcn
 mirror_rsync $ARCH32_MIRROR/ archlinux32
 mirror_rsync $ARTIX_MIRROR/ artix-linux/repos
@@ -127,6 +131,13 @@ mirror_rsync --exclude="archive" $FDROID_MIRROR/ fdroid
 # --- FEDORA MIRROR
 mirror_rsync --exclude "4*" --exclude "5*" --exclude "6*" --exclude "7*" --exclude "8.*" --exclude "testing*" $FEDORA_MIRROR/ fedora/fedora-epel
 mirror_rsync --exclude "deprecated-isos*" $FEDORA_VIRTIO_MIRROR/ fedora/groups/virt/virtio-win
+
+# --- APACHE SOFTWARE MIRROR
+mirror_rsync $APACHE_MIRROR/ apache
+
+# --- MYSQL SOFTWARE MIRROR (Only connectors)
+# --exclude={"Downloads/MySQL-[4-7]*","Downloads/MySQL-Cluster-[4-7]*"} - For latest mysql software
+mirror_rsync --exclude={"Downloads/MySQL-[4-8]*","Downloads/MySQL-Cluster-[4-8]*"} $MYSQL_MIRROR/ mysql
 
 # --- DEBIAN-BASED DISTROS MIRROR
 if [[ "$APT_MIRROR" == "1" && -f "$WORK_DIR/apt-mirror-fixed" && -f "$MIRROR_DIR/apt/mirror.list" && -x $(command -v wget) && -x $(command -v gunzip) && -x $(command -v bzip2) && -x $(command -v xz) ]]; then
