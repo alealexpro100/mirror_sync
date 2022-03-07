@@ -38,7 +38,7 @@ OPENWRT_MIRROR="rsync://openwrt.tetaneutral.net/openwrt"
 HAIKU_MIRROR="rsync://mirror.rit.edu/haiku"
 TINYCORE_MIRROR="rsync://tinycorelinux.net/tc"
 APT_MIRROR="1" APT_MIRROR_FIX="0"
-ORACLE_MIRROR="1"
+ORACLE_MIRROR="0"
 
 function mirror_rsync() {
     if command -v rsync &> /dev/null; then
