@@ -41,8 +41,7 @@ https://gitlab.alpinelinux.org/alpine/infra/alpine-netboot.git gitlab.alpinelinu
 https://gitlab.alpinelinux.org/alpine/infra/aports-turbo.git gitlab.alpinelinux.org/alpine/infra/aports-turbo.git
 https://gitlab.alpinelinux.org/alpine/infra/build-server-status.git gitlab.alpinelinux.org/alpine/infra/build-server-status.git
 https://gitlab.alpinelinux.org/alpine/infra/gitlab-ci-templates.git gitlab.alpinelinux.org/alpine/infra/gitlab-ci-templates.git
-https://gitlab.alpinelinux.org/alpine/infra/ifra.git gitlab.alpinelinux.org/alpine/infra/ifra.git
-https://gitlab.alpinelinux.org/alpine/infra/ifra-packages.git gitlab.alpinelinux.org/alpine/infra/ifra-packages.git
+https://gitlab.alpinelinux.org/alpine/infra/infra-packages.git gitlab.alpinelinux.org/alpine/infra/infra-packages.git
 https://gitlab.alpinelinux.org/alpine/infra/mirror-status.git gitlab.alpinelinux.org/alpine/infra/mirror-status.git
 https://gitlab.alpinelinux.org/alpine/infra/repo-tools.git gitlab.alpinelinux.org/alpine/infra/repo-tools.git
 https://gitlab.alpinelinux.org/alpine/infra/turbo-paste.git gitlab.alpinelinux.org/alpine/infra/turbo-paste.git
