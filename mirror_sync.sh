@@ -35,7 +35,7 @@ APACHE_MIRROR="rsync://mirrors.dotsrc.org/apache"
 MYSQL_MIRROR="rsync://mirrors.dotsrc.org/mysql"
 CYGWIN_MIRROR="rsync://mirrors.dotsrc.org/cygwin"
 OPENWRT_MIRROR="rsync://openwrt.tetaneutral.net/openwrt"
-HAIKU_MIRROR="rsync://mirror.rit.edu/haiku"
+#HAIKU_MIRROR="rsync://mirror.rit.edu/haiku"
 TINYCORE_MIRROR="rsync://tinycorelinux.net/tc"
 APT_MIRROR="1" APT_MIRROR_FIX="0"
 ORACLE_MIRROR="0"
@@ -54,15 +54,22 @@ function mirror_rsync() {
 }
 
 function git_update() {
+    local repo name exit_text=''
     IFS=" " read -r -a repo_name <<< "$*"
     repo="${repo_name[0]}"
     name="${repo_name[1]}"
     echo " [Git update $name to $REPOS_DIR/$name...]"
     if [[ -d "$REPOS_DIR/$name/.git" ]]; then
-        git -C "$REPOS_DIR/$name" pull origin master --rebase || echo "Failed to update $name!"
+        git -C "$REPOS_DIR/$name" pull --all --prune --force -q || exit_text="update"
     else
         mkdir -p "$REPOS_DIR/$name"
-        git clone "$repo" "$REPOS_DIR/$name" || echo "Failed to create $name!"
+        git clone "$repo" "$REPOS_DIR/$name" -q || exit_text="create"
+    fi
+    if [[ -n $exit_text ]]; then
+        echo "--Failed to $exit_text $name!--"
+        [[ $exit_text != "create" ]] || rm -rf "${REPOS_DIR:?}/$name"
+    else
+        echo -e "++Complete successfully.++"
     fi
 }
 
