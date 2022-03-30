@@ -47,7 +47,7 @@ function mirror_rsync() {
         else
             echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
             [[ "$RSYNC_FILE" == "1" || -d "${*: -1}" ]] || mkdir -p "${*: -1}"
-            rsync --contimeout=3 --timeout=20 --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}!"
+            rsync --contimeout=20 --timeout=40 --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}! Code exit is $?."
             echo -e "}\n"
         fi
     fi
@@ -147,7 +147,7 @@ mirror_rsync $APACHE_MIRROR/ apache
 mirror_rsync --exclude={"Downloads/MySQL-[4-8]*","Downloads/MySQL-Cluster-[4-8]*"} $MYSQL_MIRROR/ mysql
 
 # --- DEBIAN-BASED DISTROS MIRROR
-if [[ "$APT_MIRROR" == "1" && -f "$WORK_DIR/apt-mirror-fixed" && -f "$MIRROR_DIR/apt/mirror.list" && -x $(command -v wget) && -x $(command -v gunzip) && -x $(command -v bzip2) && -x $(command -v xz) ]]; then
+if [[ "$APT_MIRROR" == "1" && -x $(command -v wget) && -x $(command -v gunzip) && -x $(command -v bzip2) && -x $(command -v xz) ]]; then
     "$WORK_DIR/apt-mirror-fixed" --config apt/mirror.list
     debian/var/clean.sh
     if [[ "$APT_MIRROR_FIX" == "1" ]]; then
@@ -166,7 +166,7 @@ mirror_rsync $CYGWIN_MIRROR/ cygwin
 mirror_rsync --exclude={"[1-9].x","1[0-1].x","www"} $TINYCORE_MIRROR/ tinycore
 
 # --- OPENWRT MIRROR
-mirror_rsync --exclude={"releases/1[7-9].*","releases/21.02.0-rc[1-4]","releases/faillogs-1[7-9].*","releases/packages-1[7-9].*"} $OPENWRT_MIRROR openwrt
+mirror_rsync --exclude={"releases/1[7-9].*","releases/21.02.0-rc[1-4]","releases/faillogs-1[7-9].*","releases/packages-1[7-9].*","snapshots"} $OPENWRT_MIRROR openwrt
 
 # --- HAIKU MIRROR
 mirror_rsync $HAIKU_MIRROR/ haiku

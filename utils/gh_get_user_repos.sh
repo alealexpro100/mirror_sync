@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ -n $1 ]]; then
+if [[ -z $1 ]]; then
   echo "No user!"
   exit 1
 fi

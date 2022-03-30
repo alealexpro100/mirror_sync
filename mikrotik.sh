@@ -5,6 +5,11 @@ set -e
 mirror_dir="mikrotik"
 download_archive=0
 
+if [[ ! -x $(command -v curl) ]]; then
+  echo "No curl found!"
+  exit 1
+fi
+
 function get_actual_url() {
   curl --silent --location --head --output /dev/null --write-out '%{url_effective}' -- "$@"
   echo

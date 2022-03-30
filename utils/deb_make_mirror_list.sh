@@ -257,5 +257,17 @@ for version in '#stretch' buster bullseye; do
 	echo_d ''
 done
 
+arch=''; version=''
+mirror='http://repo.mongodb.org/apt/debian'
+clean="$clean\nclean http://repo.mongodb.org/apt/debian"
+echo_d -e "\n# MONGODB CE (debian)"
+for version in '#stretch' buster; do
+	echo_d -e "# -- $version"
+	for arch in amd64 arm64; do
+		echo_d "deb-$arch $mirror ${version}/mongodb-org/5.0 main"
+	done
+	echo_d ''
+done
+
 echo -e "\n$clean"
 
