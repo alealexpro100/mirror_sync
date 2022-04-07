@@ -47,7 +47,9 @@ function mirror_rsync() {
         else
             echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
             [[ "$RSYNC_FILE" == "1" || -d "${*: -1}" ]] || mkdir -p "${*: -1}"
-            rsync --contimeout=20 --timeout=40 --recursive --links --copy-unsafe-links --times --sparse --delete --delete-after --delete-excluded --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}! Code exit is $?."
+            rsync --contimeout=20 --timeout=40 --recursive --links --copy-unsafe-links --times --sparse \
+                --delete --delete-after --delete-excluded \
+                --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}! Code exit is $?."
             echo -e "}\n"
         fi
     fi
@@ -73,24 +75,18 @@ function git_update() {
     fi
 }
 
-function git_update_list() {
-    while IFS= read -r repo_name; do
-        git_update "$repo_name"
-    done < <(cat "$1")
-}
-
 cd "$MIRROR_DIR"
 
 bash "$WORK_DIR/mikrotik.sh"
 
 if command -v git &> /dev/null; then
     [[ -d "$REPOS_DIR" ]] || mkdir -p "$REPOS_DIR"
-    git_update_list "$WORK_DIR/list.git/alpine"
-    git_update_list "$WORK_DIR/list.git/dietpi"
-    git_update_list "$WORK_DIR/list.git/openwrt"
-    git_update_list "$WORK_DIR/list.git/postmarketos"
-    git_update_list "$WORK_DIR/list.git/void"
-    git_update_list "$WORK_DIR/list.git/various"
+    while IFS= read -r repo_list_file; do
+        while IFS= read -r repo_name; do
+            [[ -n "$repo_name" ]] || continue
+            git_update "$repo_name"
+        done < <(cat "$repo_list_file")
+    done < <(find "$WORK_DIR/list.git" -type f)
 fi
 
 # --- ALPINELINUX MIRROR
@@ -173,7 +169,8 @@ mirror_rsync $HAIKU_MIRROR/ haiku
 
 # --- ORACLELINUX 8 MIRROR
 if [[ "$ORACLE_MIRROR" == "1" && -f /usr/bin/reposync && -f "$WORK_DIR/oracle_config.repo" ]]; then
-  /usr/bin/reposync --bugfix --enhancement --newpackage --security --download-metadata --downloadcomps --remote-time --newest-only --delete --config "$WORK_DIR/oracle_config.repo" -p oraclelinux/
+  /usr/bin/reposync --bugfix --enhancement --newpackage --security --download-metadata \
+    --downloadcomps --remote-time --newest-only --delete --config "$WORK_DIR/oracle_config.repo" -p oraclelinux/
 fi
 
 # =)

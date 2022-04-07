@@ -158,11 +158,8 @@ arch=''; version=''
 mirror='https://download.onlyoffice.com/repo/debian'
 clean="$clean\nclean $mirror"
 echo_d -e "\n# ONLYOFFICE"
-for version in squeeze; do
-	echo_d -e "# -- $version"
-	for arch in amd64 i386; do
-		echo_d "deb-$arch $mirror ${version} main"
-	done
+for arch in amd64 i386; do
+	echo_d "deb-$arch $mirror squeeze main"
 done
 
 arch=''; version=''
@@ -249,7 +246,7 @@ done
 
 arch=''; version=''
 mirror='http://download.proxmox.com/debian/pve'
-clean="$clean\nclean http://download.proxmox.com/debian/pve"
+clean="$clean\nclean $mirror"
 echo_d -e "\n# PROXMOX"
 for version in '#stretch' buster bullseye; do
 	echo_d -e "# -- $version"
@@ -259,7 +256,7 @@ done
 
 arch=''; version=''
 mirror='http://repo.mongodb.org/apt/debian'
-clean="$clean\nclean http://repo.mongodb.org/apt/debian"
+clean="$clean\nclean $mirror"
 echo_d -e "\n# MONGODB CE (debian)"
 for version in '#stretch' buster; do
 	echo_d -e "# -- $version"
@@ -269,5 +266,31 @@ for version in '#stretch' buster; do
 	echo_d ''
 done
 
-echo -e "\n$clean"
+arch=''; version=''
+mirror='https://repo.radeon.com/rocm/apt/debian'
+clean="$clean\nclean $mirror"
+echo_d -e "\n# AMD ROCM"
+echo_d "deb-amd64 $mirror ubuntu main proprietary"
+echo_d ''
 
+arch=''; version=''
+mirror='https://repo.radeon.com/amdgpu/latest/ubuntu'
+clean="$clean\nclean $mirror"
+echo_d -e "\n# AMDGPU"
+for version in bionic focal; do
+	echo_d -e "# -- $version"
+	for arch in i386 amd64 src; do
+		echo_d "deb-$arch $mirror ${version} main proprietary"
+	done
+	echo_d ''
+done
+
+arch=''; version=''
+mirror='https://repo.radeon.com/amdvlk/apt/debian'
+clean="$clean\nclean $mirror"
+echo_d -e "\n# AMDVLK"
+for arch in i386 amd64; do
+	echo_d "deb-$arch $mirror bionic main"
+done
+
+echo -e "\n$clean"
