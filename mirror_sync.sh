@@ -8,35 +8,39 @@
 set -e
 
 declare -gx MIRROR_DIR="/mnt/mirror"
-declare -gx REPOS_DIR="$MIRROR_DIR/git"
+#declare -gx REPOS_DIR="$MIRROR_DIR/git"
 WORK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+#CPAN_MIRROR="rsync://cdimage.debian.org/mirror/CPAN"
+#CTAN_MIRROR="rsync://cdimage.debian.org/mirror/CTAN"
 ALPINE_MIRROR="rsync://mirrors.dotsrc.org/alpine"
 POSTMARKETOS_MIRROR="rsync://mirror.postmarketos.org/postmarketos"
 #POSTMARKETOS_IMAGES_MIRROR="rsync://mirror.postmarketos.org/images"
 ARCH_MIRROR="rsync://mirrors.dotsrc.org/archlinux"
-ARCH_SOURCE_MIRROR="rsync://mirrors.kernel.org/archlinux/sources"
-MANJARO_MIRROR="rsync://mirror.truenetwork.ru/manjaro"
-ARCH32_MIRROR="rsync://mirror.archlinux32.org/archlinux32"
-ARTIX_MIRROR="rsync://universe.artixlinux.org/repos"
-ARTIX_UNIVERSE_MIRROR="rsync://universe.artixlinux.org/universe"
-ARCHARM_MIRROR="rsync://mirrors.dotsrc.org/archlinuxarm"
-BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
+#ARCH_SOURCE_MIRROR="rsync://mirrors.kernel.org/archlinux/sources"
+#MANJARO_MIRROR="rsync://mirror.truenetwork.ru/manjaro"
+#ARCH32_MIRROR="rsync://mirror.archlinux32.org/archlinux32"
+#ARTIX_MIRROR="rsync://universe.artixlinux.org/repos"
+#ARTIX_UNIVERSE_MIRROR="rsync://universe.artixlinux.org/universe"
+#ARCHARM_MIRROR="rsync://mirrors.dotsrc.org/archlinuxarm"
+#BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
+ARCHSTRIKE_MIRROR="rsync://cdimage.debian.org/mirror/archstrike.org"
 MIRROR_CHAOTIC_AUR="rsync://builds.garudalinux.org/chaotic/chaotic-aur"
-ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
-VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux"
+#ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
+#SOLYDXK_MIRROR="rsync://cdimage.debian.org/mirror/solydxk.com"
+#VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux" # ~253GB
 #ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
 ASTRA_MIRROR="rsync://mirror.yandex.ru/astra"
 #ALT_MIRROR="rsync://rsync.altlinux.org/ALTLinux"
 MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos"
-FDROID_MIRROR="rsync://mirrors.dotsrc.org/fdroid"
+#FDROID_MIRROR="rsync://mirrors.dotsrc.org/fdroid"
 #FEDORA_MIRROR="rsync://mirrors.dotsrc.org/fedora-buffet"
 FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win"
-APACHE_MIRROR="rsync://mirrors.dotsrc.org/apache"
-MYSQL_MIRROR="rsync://mirrors.dotsrc.org/mysql"
-CYGWIN_MIRROR="rsync://mirrors.dotsrc.org/cygwin"
-OPENWRT_MIRROR="rsync://openwrt.tetaneutral.net/openwrt"
+#APACHE_MIRROR="rsync://mirrors.dotsrc.org/apache"
+#MYSQL_MIRROR="rsync://mirrors.dotsrc.org/mysql"
+#CYGWIN_MIRROR="rsync://mirrors.dotsrc.org/cygwin"
+#OPENWRT_MIRROR="rsync://openwrt.tetaneutral.net/openwrt"
 #HAIKU_MIRROR="rsync://mirror.rit.edu/haiku"
-TINYCORE_MIRROR="rsync://tinycorelinux.net/tc"
+#TINYCORE_MIRROR="rsync://tinycorelinux.net/tc" # ~72GB
 APT_MIRROR="1" APT_MIRROR_FIX="0"
 ORACLE_MIRROR="0"
 
@@ -62,7 +66,7 @@ function git_update() {
     name="${repo_name[1]}"
     echo " [Git update $name to $REPOS_DIR/$name...]"
     if [[ -d "$REPOS_DIR/$name/.git" ]]; then
-        git -C "$REPOS_DIR/$name" pull --all --prune --force -q || exit_text="update"
+        git -C "$REPOS_DIR/$name" pull --all --prune --force -q --rebase || exit_text="update"
     else
         mkdir -p "$REPOS_DIR/$name"
         git clone "$repo" "$REPOS_DIR/$name" -q || exit_text="create"
@@ -79,7 +83,7 @@ cd "$MIRROR_DIR"
 
 bash "$WORK_DIR/mikrotik.sh"
 
-if command -v git &> /dev/null; then
+if [[ $(command -v git &> /dev/null) && -n "$REPOS_DIR" ]]; then
     [[ -d "$REPOS_DIR" ]] || mkdir -p "$REPOS_DIR"
     while IFS= read -r repo_list_file; do
         while IFS= read -r repo_name; do
@@ -89,8 +93,12 @@ if command -v git &> /dev/null; then
     done < <(find "$WORK_DIR/list.git" -type f)
 fi
 
+# --- CPAN and CTAN
+mirror_rsync $CPAN_MIRROR/ CPAN
+mirror_rsync $CTAN_MIRROR/ CTAN
+
 # --- ALPINELINUX MIRROR
-mirror_rsync --exclude={"v3.[0-9]","v3.1[0-3]","edge/releases","*/*/armv7","*/*/mips64","*/*/ppc64le","*/*/riscv64","*/*/s390x"} $ALPINE_MIRROR/ alpine
+mirror_rsync --exclude={"v3.[0-9]","v3.1[0-5]","edge/releases","*/*/armv7","*/*/mips64","*/*/ppc64le","*/*/riscv64","*/*/s390x"} $ALPINE_MIRROR/ alpine
 
 # --- POSTMARKETOS MIRROR
 mirror_rsync $POSTMARKETOS_MIRROR/ postmarketos/postmarketos
@@ -107,6 +115,10 @@ mirror_rsync $ARCH32_MIRROR/ archlinux32
 mirror_rsync $ARTIX_MIRROR/ artix-linux/repos
 mirror_rsync $ARTIX_UNIVERSE_MIRROR/ artix-linux/universe
 mirror_rsync $MANJARO_MIRROR/ manjaro
+mirror_rsync $ARCHSTRIKE_MIRROR/ archstrike
+
+# --- SOLYDXK.COM
+mirror_rsync $SOLYDXK_MIRROR/ solydxk
 
 # --- VOIDLINUX MIRROR
 for al_repo in "docs" "live/current" "logos" "static" "void-updates"; do
@@ -117,7 +129,6 @@ mirror_rsync --exclude={"*.armv[6-7]l.xbps*","*.armv[6-7]l-musl.xbps*","aarch64/
 # --- ASTRALINUX MIRROR
 RSYNC_FILE=1 mirror_rsync $ASTRA_MIRROR/README-ASTRA.txt astra/README-ASTRA.txt
 mirror_rsync --exclude={"leningrad","smolensk"} $ASTRA_MIRROR/stable/ astra/stable
-mirror_rsync $ASTRA_MIRROR/testing/ astra/testing
 
 # --- ALTLINUX MIRROR
 mirror_rsync --exclude={"[2-5].[0-4]","Daedalus","autoimports/p[7-9]","backports","c[6-8]","c8.[0-1]","c9f1","cert6","old","p[5-9]","t[6-7]","ports","updates","autoimports"} \
@@ -132,7 +143,7 @@ mirror_rsync $MXISO_MIRROR/ MX-Linux/MX-ISOs
 mirror_rsync --exclude="archive" $FDROID_MIRROR/ fdroid
 
 # --- FEDORA MIRROR
-mirror_rsync --exclude "4*" --exclude "5*" --exclude "6*" --exclude "7*" --exclude "8.*" --exclude "testing*" $FEDORA_MIRROR/ fedora/fedora-epel
+mirror_rsync --exclude={"alt","archive","epel/7*","epel/8/*/s390x","epel/8/*/ppc64le","epel/9/*/s390x","epel/9/*/ppc64le","epel/next/8/*/s390x","epel/next/8/*/ppc64le","epel/next/9/*/s390x",,"epel/next/9/*/ppc64le","epel/playground","epel/testing","fedora/linux/releases/3[4-5]","fedora/linux/releases/test","fedora/linux/updates/3[4-5]","fedora/linux/updates/testing","fedora/linux/development","fedora-secondary"} $FEDORA_MIRROR/ fedora/fedora-buffet
 mirror_rsync --exclude "deprecated-isos*" $FEDORA_VIRTIO_MIRROR/ fedora/groups/virt/virtio-win
 
 # --- APACHE SOFTWARE MIRROR
@@ -144,14 +155,15 @@ mirror_rsync --exclude={"Downloads/MySQL-[4-8]*","Downloads/MySQL-Cluster-[4-8]*
 
 # --- DEBIAN-BASED DISTROS MIRROR
 if [[ "$APT_MIRROR" == "1" && -x $(command -v wget) && -x $(command -v gunzip) && -x $(command -v bzip2) && -x $(command -v xz) ]]; then
-    "$WORK_DIR/apt-mirror-fixed" --config apt/mirror.list
-    debian/var/clean.sh
-    if [[ "$APT_MIRROR_FIX" == "1" ]]; then
+    "$WORK_DIR/apt-mirror-fixed" --config apt/mirror.list || NO_APT_ACTIONS=1
+    [[ $NO_APT_ACTIONS == "1" ]] || debian/var/clean.sh
+    if [[ $NO_APT_ACTIONS != "1" && "$APT_MIRROR_FIX" == "1" ]]; then
         "$WORK_DIR/apt-mirror-fix" apt/mirror.list
         mirror_path=$(grep -F "set base_path" "$1" | tr -s " " | cut -d' ' -f3)
         bash "$mirror_path/mirror/download_X.sh"
         bash "$mirror_path/mirror/download_E.sh"
     fi
+    unset NO_APT_ACTIONS
 fi
 
 # --- CYGWIN MIRROR

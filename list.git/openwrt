@@ -7,9 +7,7 @@ https://git.openwrt.org/keyring.git git.openwrt.org/keyring.git
 https://git.openwrt.org/maintainer-tools.git git.openwrt.org/maintainer-tools.git
 https://git.openwrt.org/openwrt/openwrt.git git.openwrt.org/openwrt/openwrt.git
 https://git.openwrt.org/openwrt/staging/981213.git git.openwrt.org/openwrt/staging/981213.git
-https://git.openwrt.org/openwrt/staging/adrian.git git.openwrt.org/openwrt/staging/adrian.git
 https://git.openwrt.org/openwrt/staging/blocktrron.git git.openwrt.org/openwrt/staging/blocktrron.git
-https://git.openwrt.org/openwrt/staging/blogic.git git.openwrt.org/openwrt/staging/blogic.git
 https://git.openwrt.org/openwrt/staging/chunkeey.git git.openwrt.org/openwrt/staging/chunkeey.git
 https://git.openwrt.org/openwrt/staging/dangole.git git.openwrt.org/openwrt/staging/dangole.git
 https://git.openwrt.org/openwrt/staging/dedeckeh.git git.openwrt.org/openwrt/staging/dedeckeh.git
@@ -75,7 +73,6 @@ https://git.openwrt.org/project/usbmode.git git.openwrt.org/project/usbmode.git
 https://git.openwrt.org/project/usign.git git.openwrt.org/project/usign.git
 https://git.openwrt.org/project/ustream-ssl.git git.openwrt.org/project/ustream-ssl.git
 https://git.openwrt.org/web.git git.openwrt.org/web.git
-https://git.openwrt.org/web/downloads-openwrt-org.git git.openwrt.org/web/downloads-openwrt-org.git
 https://git.openwrt.org/web/firmware-selector-openwrt-org.git git.openwrt.org/web/firmware-selector-openwrt-org.git
 https://git.openwrt.org/web/lists-openwrt-org.git git.openwrt.org/web/lists-openwrt-org.git
 https://git.openwrt.org/openwrt/staging/zorun.git git.openwrt.org/openwrt/staging/zorun.git

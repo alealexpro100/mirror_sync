@@ -18,3 +18,7 @@ Supported mirrors:
 ## Usage
 * link `.service` and `.timer` to systemd service files.
 * Activate `offline_mirror.timer` in your system.
+
+# Sources:
+* apt-mirror: [Stifler6996's apt-mirror](https://github.com/Stifler6996/apt-mirror)
+* vscode sync: [LOLINTERNETZ's vscodeoffline](https://github.com/LOLINTERNETZ/vscodeoffline)
