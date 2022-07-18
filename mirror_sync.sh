@@ -12,10 +12,10 @@ declare -gx MIRROR_DIR="/mnt/mirror"
 WORK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 #CPAN_MIRROR="rsync://cdimage.debian.org/mirror/CPAN"
 #CTAN_MIRROR="rsync://cdimage.debian.org/mirror/CTAN"
-ALPINE_MIRROR="rsync://mirrors.dotsrc.org/alpine"
-POSTMARKETOS_MIRROR="rsync://mirror.postmarketos.org/postmarketos"
+ALPINE_MIRROR="rsync://mirrors.dotsrc.org/alpine" # ~272GB
+POSTMARKETOS_MIRROR="rsync://mirror.postmarketos.org/postmarketos" # ~24GB
 #POSTMARKETOS_IMAGES_MIRROR="rsync://mirror.postmarketos.org/images"
-ARCH_MIRROR="rsync://mirrors.dotsrc.org/archlinux"
+ARCH_MIRROR="rsync://mirrors.dotsrc.org/archlinux" # ~67GB
 #ARCH_SOURCE_MIRROR="rsync://mirrors.kernel.org/archlinux/sources"
 #MANJARO_MIRROR="rsync://mirror.truenetwork.ru/manjaro"
 #ARCH32_MIRROR="rsync://mirror.archlinux32.org/archlinux32"
@@ -23,18 +23,18 @@ ARCH_MIRROR="rsync://mirrors.dotsrc.org/archlinux"
 #ARTIX_UNIVERSE_MIRROR="rsync://universe.artixlinux.org/universe"
 #ARCHARM_MIRROR="rsync://mirrors.dotsrc.org/archlinuxarm"
 #BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
-ARCHSTRIKE_MIRROR="rsync://cdimage.debian.org/mirror/archstrike.org"
-MIRROR_CHAOTIC_AUR="rsync://builds.garudalinux.org/chaotic/chaotic-aur"
+ARCHSTRIKE_MIRROR="rsync://cdimage.debian.org/mirror/archstrike.org" # ~22GB
+MIRROR_CHAOTIC_AUR="rsync://builds.garudalinux.org/chaotic/chaotic-aur" # ~71GB
 #ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 #SOLYDXK_MIRROR="rsync://cdimage.debian.org/mirror/solydxk.com"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux" # ~253GB
 #ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
-ASTRA_MIRROR="rsync://mirror.yandex.ru/astra"
+ASTRA_MIRROR="rsync://mirror.yandex.ru/astra" # ~75GB
 #ALT_MIRROR="rsync://rsync.altlinux.org/ALTLinux"
-MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos"
+MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos" # ~49GB
 #FDROID_MIRROR="rsync://mirrors.dotsrc.org/fdroid"
 #FEDORA_MIRROR="rsync://mirrors.dotsrc.org/fedora-buffet"
-FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win"
+FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win" # ~38GB
 #APACHE_MIRROR="rsync://mirrors.dotsrc.org/apache"
 #MYSQL_MIRROR="rsync://mirrors.dotsrc.org/mysql"
 #CYGWIN_MIRROR="rsync://mirrors.dotsrc.org/cygwin"
@@ -43,6 +43,7 @@ FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win"
 #TINYCORE_MIRROR="rsync://tinycorelinux.net/tc" # ~72GB
 APT_MIRROR="1" APT_MIRROR_FIX="0"
 ORACLE_MIRROR="0"
+MIKROTIK_MIRROR="1" # ~20GB
 
 function mirror_rsync() {
     if command -v rsync &> /dev/null; then
@@ -81,7 +82,9 @@ function git_update() {
 
 cd "$MIRROR_DIR"
 
-bash "$WORK_DIR/mikrotik.sh"
+if [[ "$MIKROTIK_MIRROR" == "1" ]]; then
+    bash "$WORK_DIR/mikrotik.sh"
+fi
 
 if [[ $(command -v git &> /dev/null) && -n "$REPOS_DIR" ]]; then
     [[ -d "$REPOS_DIR" ]] || mkdir -p "$REPOS_DIR"
