@@ -313,7 +313,7 @@ arch=''; version=''
 mirror='#https://deb.torproject.org/torproject.org'
 add_d "$mirror"
 echo_d -e "\n# TOR"
-for version in '#stretch' buster bullseye sid; do
+for version in '#stretch' '#buster' bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 arm64; do
 		echo_d "deb-$arch $mirror ${version} contrib non-free"
@@ -324,7 +324,7 @@ arch=''; version=''
 mirror='#http://archive.turnkeylinux.org/debian'
 add_d "$mirror"
 echo_d -e "\n# TURNKEY"
-for version in '#stretch' buster bullseye; do
+for version in '#stretch' '#buster' bullseye; do
 	echo_d -e "# -- $version"
 	for arch in all amd64; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -379,7 +379,7 @@ arch=''; version=''
 mirror='https://download.docker.com/linux/debian'
 add_d "$mirror"
 echo_d -e "\n# Docker CE"
-for version in '#stretch' buster bullseye; do
+for version in '#stretch' "#buster" bullseye; do
 	echo_d -e "# -- $version"
 	for arch in amd64 arm64 armhf '#ppc64el'; do
 		echo_d "deb-$arch $mirror ${version} stable test nightly"

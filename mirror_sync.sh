@@ -27,7 +27,7 @@ ARCHSTRIKE_MIRROR="rsync://cdimage.debian.org/mirror/archstrike.org"
 MIRROR_CHAOTIC_AUR="rsync://builds.garudalinux.org/chaotic/chaotic-aur"
 #ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 #SOLYDXK_MIRROR="rsync://cdimage.debian.org/mirror/solydxk.com"
-#VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux" # ~253GB
+VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux" # ~253GB
 #ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
 ASTRA_MIRROR="rsync://mirror.yandex.ru/astra"
 #ALT_MIRROR="rsync://rsync.altlinux.org/ALTLinux"
@@ -121,10 +121,7 @@ mirror_rsync $ARCHSTRIKE_MIRROR/ archstrike
 mirror_rsync $SOLYDXK_MIRROR/ solydxk
 
 # --- VOIDLINUX MIRROR
-for al_repo in "docs" "live/current" "logos" "static" "void-updates"; do
-    mirror_rsync $VOID_MIRROR/$al_repo/ voidlinux/$al_repo
-done
-mirror_rsync --exclude={"*.armv[6-7]l.xbps*","*.armv[6-7]l-musl.xbps*","aarch64/debug*","debug*"} $VOID_MIRROR/current/ voidlinux/current
+mirror_rsync --exclude={"live/201*","live/2020*","live/20210[2-3]*","void-updates","distfiles","current/*.armv[6-7]l.xbps*","current/*.armv[6-7]l-musl.xbps*","current/aarch64/debug*","current/debug*","current/musl/debug*"} $VOID_MIRROR/ voidlinux
 
 # --- ASTRALINUX MIRROR
 RSYNC_FILE=1 mirror_rsync $ASTRA_MIRROR/README-ASTRA.txt astra/README-ASTRA.txt

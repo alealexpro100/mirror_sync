@@ -3,6 +3,7 @@ mirror_sync
 
 ## About
 Collection of scripts for synchronization of local mirror.
+Enables variety of options to enable or disable specific repositories.
 Supported mirrors:
 * Alpinelinux
 * Archlinux
@@ -15,10 +16,12 @@ Supported mirrors:
 * Cygwin
 * Mikrotik
 
+This is personal collection of scripts. That's why commits are not commented.
+It is running on LXC container on OracleLinux with 512 MB of memory with 4 threads (ryzen 2600) and two 3TB disks with BTRFS system.
+
 ## Usage
 * link `.service` and `.timer` to systemd service files.
 * Activate `offline_mirror.timer` in your system.
 
 # Sources:
 * apt-mirror: [Stifler6996's apt-mirror](https://github.com/Stifler6996/apt-mirror)
-* vscode sync: [LOLINTERNETZ's vscodeoffline](https://github.com/LOLINTERNETZ/vscodeoffline)
