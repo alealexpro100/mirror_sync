@@ -45,7 +45,7 @@ set _tilde 0
 
 arch=''; version=''
 mirror='https://deb.debian.org/debian'
-s_mirror='http://security.debian.org'
+s_mirror='https://security.debian.org'
 add_d "$mirror"
 add_d "$s_mirror"
 echo_d -e "\n# DEBIAN"
@@ -395,6 +395,14 @@ for version in '#stretch' '#buster' bullseye; do
 	for arch in amd64 arm64; do
 		echo_d "deb-$arch $mirror ${version} nginx"
 	done
+done
+
+arch=''; version=''
+mirror='https://download.opensuse.org/repositories/home:/Hezekiah/Debian_10'
+add_d "$mirror"
+echo_d -e "\n# samba-ad-dc"
+for arch in amd64 src; do
+	echo_d "deb-$arch $mirror ./"
 done
 
 echo -e "\n$clean"
