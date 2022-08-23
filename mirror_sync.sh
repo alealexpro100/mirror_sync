@@ -29,7 +29,7 @@ MIRROR_CHAOTIC_AUR="rsync://builds.garudalinux.org/chaotic/chaotic-aur" # ~71GB
 #SOLYDXK_MIRROR="rsync://cdimage.debian.org/mirror/solydxk.com"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux" # ~253GB
 #ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
-ASTRA_MIRROR="rsync://mirror.yandex.ru/astra" # ~75GB
+ASTRA_MIRROR="rsync://dl.astralinux.ru/astra" # ~75GB
 #ALT_MIRROR="rsync://rsync.altlinux.org/ALTLinux"
 MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos" # ~49GB
 #FDROID_MIRROR="rsync://mirrors.dotsrc.org/fdroid"
@@ -128,6 +128,7 @@ mirror_rsync --exclude={"live/201*","live/2020*","live/20210[2-3]*","void-update
 
 # --- ASTRALINUX MIRROR
 RSYNC_FILE=1 mirror_rsync $ASTRA_MIRROR/README-ASTRA.txt astra/README-ASTRA.txt
+mirror_rsync $ASTRA_MIRROR/aldpro/ astra/aldpro
 mirror_rsync --exclude={"leningrad","smolensk"} $ASTRA_MIRROR/stable/ astra/stable
 
 # --- ALTLINUX MIRROR
