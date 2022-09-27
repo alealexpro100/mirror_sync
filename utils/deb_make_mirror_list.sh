@@ -7,7 +7,7 @@ echo_d() {
 }
 
 add_d() {
-	if [[ "${1:0:1}" != "#" ]]; then
+	if [[ "${1:0:1}" != "#" && -n $(echo_d test) ]]; then
 		clean="$clean\nclean $1"
 	fi
 }
@@ -101,14 +101,13 @@ done
 
 arch=''; version=''
 mirror='https://repo.antixlinux.com'
-add_d "$mirror"
 echo_d -e "\n# ANTIX (Based on debian)"
 for version in '#stretch' '#buster' bullseye sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror/$version ${version} main nosystemd nonfree"
 	done
-	clean="$clean\nclean $mirror/$version"
+	add_d "$mirror/$version"
 	echo_d ''
 done
 
@@ -339,6 +338,12 @@ mirror='#https://packages.microsoft.com/repos/vscode'
 add_d "$mirror"
 echo_d -e "\n# VSCODE"
 echo_d "deb-amd64 $mirror stable main"
+
+arch=''; version=''
+mirror='https://repo.saltproject.io/salt/py3/debian/11/amd64/latest'
+add_d "$mirror"
+echo_d -e "\n# SALT (latest)"
+echo_d "deb-amd64 $mirror bullseye main"
 
 arch=''; version=''
 mirror='#https://packages.microsoft.com/repos/ms-teams'

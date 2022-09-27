@@ -127,9 +127,9 @@ mirror_rsync $SOLYDXK_MIRROR/ solydxk
 mirror_rsync --exclude={"live/201*","live/2020*","live/20210[2-3]*","void-updates","distfiles","current/*.armv[6-7]l.xbps*","current/*.armv[6-7]l-musl.xbps*","current/aarch64/debug*","current/debug*","current/musl/debug*"} $VOID_MIRROR/ voidlinux
 
 # --- ASTRALINUX MIRROR
-RSYNC_FILE=1 mirror_rsync $ASTRA_MIRROR/README-ASTRA.txt astra/README-ASTRA.txt
+RSYNC_FILE=1 mirror_rsync $ASTRA_MIRROR/astra/README-ASTRA.txt astra/README-ASTRA.txt
 mirror_rsync $ASTRA_MIRROR/aldpro/ astra/aldpro
-mirror_rsync --exclude={"leningrad","smolensk"} $ASTRA_MIRROR/stable/ astra/stable
+mirror_rsync --exclude={"leningrad","smolensk"} $ASTRA_MIRROR/astra/stable/ astra/stable
 
 # --- ALTLINUX MIRROR
 mirror_rsync --exclude={"[2-5].[0-4]","Daedalus","autoimports/p[7-9]","backports","c[6-8]","c8.[0-1]","c9f1","cert6","old","p[5-9]","t[6-7]","ports","updates","autoimports"} \
