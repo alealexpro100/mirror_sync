@@ -258,6 +258,31 @@ for version in '#xenial' '#focal' jammy; do
 	echo_d ''
 done
 
+#For astra please see https://wiki.astralinux.ru/pages/viewpage.action?pageId=158598882.
+
+arch=''; version=''
+mirror='https://dl.astralinux.ru/astra/stable'
+add_d "$mirror"
+echo_d -e "\n# ASTRALINUX SE"
+
+version="1.7_x86-64"
+echo_d -e "# -- $version"
+for arch in amd64; do
+	echo_d "deb-$arch $mirror/${version}/repository-main ${version} main contrib non-free"
+	echo_d "deb-$arch $mirror/${version}/repository-update ${version} main contrib non-free"
+	echo_d "deb-$arch $mirror/${version}/repository-base ${version} main contrib non-free"
+	echo_d "deb-$arch $mirror/${version}/repository-extended ${version} main contrib non-free astra-ce"
+done
+echo_d ''
+version="4.7_arm"
+echo_d -e "# -- $version"
+for arch in arm64 armhf; do
+	echo_d "deb-$arch $mirror/${version}/repository-main ${version} main contrib non-free baikal1 huawei1"
+	echo_d "deb-$arch $mirror/${version}/repository-update ${version} main contrib non-free baikal1 huawei1"
+	echo_d "deb-$arch $mirror/${version}/repository-base ${version} main contrib non-free baikal1 huawei1"
+	[[ $arch == armhf ]] || echo_d "deb-$arch $mirror/${version}/repository-extended ${version} main contrib non-free astra-ce"
+done
+echo_d ''
 
 arch=''; version=''
 mirror='http://download.proxmox.com/debian/pve'
