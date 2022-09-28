@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Check avaliable files by SHA256 sums. Corrupted files will be redownloaded. Requries mirror.list file, wget, md5sum, sha256sum, bash, coreutils.
 if [[ ! -f $1 ]]; then
   echo "Check and fix script after apt-mirror. Requries path to config."
@@ -7,16 +9,34 @@ if [[ ! -f $1 ]]; then
   exit 1
 fi
 
+# Variables are exported to be avaliable in next bash sessions.
 mirror_path=$(grep -F "set base_path" "$1" | tr -s " " | cut -d' ' -f3)
 declare -gx mirror_path
 threads="$(nproc)"
-if [[ $(command -v "$1" &> /dev/null) ]]; then
-  parallel_command=parallel
-else
-  parallel_command=xargs
-fi
+fix_script="$mirror_path/mirror/fix_files.sh"
+declare -gx fix_script
+
+echo "#!/bin/bash
+
+#We check file hashes here again to prevent download
+#of previously downloaded files after previous run of this script
+function fix_file() {
+  if [[ -f \$3 ]]; then
+    if echo \"\$2 \$3\" | \$1 -c - &>> /dev/null; then
+      echo \"File \$3 is correct!\"
+    else
+      echo \"Re-downloading incorrect file...\"
+      wget -t 3 -O \$3 \$4
+    fi
+  else
+    echo \"Re-downloading non-existing file...\"
+    wget -t 3 -O \$3 \$4
+  fi
+}
+
+" > "$fix_script"
+
 echo -e "Help:\nN - Signature is correct.\nX - Signature is incorrect.\nE - File not found."
-rm -rf "$mirror_path/mirror/download_X.sh" "$mirror_path/mirror/download_E.sh"
 
 deb_check_file() {
   IFS=" " read -r -a file_sum <<< "$*"
@@ -27,17 +47,19 @@ deb_check_file() {
       echo -n 'N'
     else
       echo -n 'X'
-      echo -e "rm -rf \"$mirror_path/mirror/$file\"\nwget -t 3 -O $mirror_path/mirror/$file https://$file" >> "$mirror_path/mirror/download_X.sh"
+      echo -e "fix_file $CHECK_COMMAND $sum $mirror_path/mirror/$file https://$file" >> "$fix_script"
     fi
   else
    echo -n 'E'
-   echo -e "wget -t 3 -O $mirror_path/mirror/$file https://$file" >> "$mirror_path/mirror/download_E.sh"
+   echo -e "fix_file $CHECK_COMMAND $sum $mirror_path/mirror/$file https://$file" >> "$fix_script"
   fi
 }
 export -f deb_check_file
 
+# Command `sort -u` prevents duplicate checks (they often exist).
+# We don't need `parallel` command. Main limit is read speed.
+# Command `xargs` is enough for both SSD and HDD.
 function check_by_hash() {
-
   local count sp="|\-/" s=1 N_f=0 X_f=0 E_f=0
   SECONDS=0
   count=$(< "$2" sort -u | wc -l)
@@ -48,14 +70,13 @@ function check_by_hash() {
     [[ $char == "E" ]] && E_f=$((E_f+1))
     time=$SECONDS
     echo -ne "\e[2K[${sp:(i++)*s%${#sp}:s}] Progress: $((count-N_f)) left.; X:$((X_f)); E:$((E_f)); N:$((N_f)). $((time/60)) Min $((time%60)) Sec elapsed.\r"
-  done < <(< "$2" sort -u | $parallel_command -I {} -n 1 -P "$threads" bash -c "CHECK_COMMAND=$1 deb_check_file \"\$@\"" _ {})
+  done < <(< "$2" sort -u | xargs -I {} -n 1 -P "$threads" bash -c "CHECK_COMMAND=$1 deb_check_file \"\$@\"" _ {})
   echo -e "\nComplete!"
 }
 
 check_by_hash sha256sum "$mirror_path/var/BUGGY_SHA256"
 check_by_hash md5sum "$mirror_path/var/MD5"
-[[ -f "$mirror_path/mirror/download_X.sh" ]] && echo -e "Script for re-downloading files with incorrect signature: $mirror_path/mirror/download_X.sh"
-[[ -f "$mirror_path/mirror/download_E.sh" ]] && echo -e "Script for downloading non-existing files: $mirror_path/mirror/download_E.sh"
+echo -e "Script for fixing files: $mirror_path/mirror/download_E.sh"
 
 # =)
 echo "Script succesfully ended its work. Have a nice day!"

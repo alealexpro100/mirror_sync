@@ -17,7 +17,7 @@ Supported mirrors:
 * Mikrotik
 
 This is personal collection of scripts. That's why commits are not commented.
-It is running on LXC container on OracleLinux with 512 MB of memory with 4 threads (ryzen 2600) and two 3TB disks with BTRFS system.
+It is running on LXC container with Debian (512MB RAM, 2 threads, 6TB HDD BTRFS).
 
 ## Usage
 * link `.service` and `.timer` to systemd service files.
