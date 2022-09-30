@@ -23,13 +23,13 @@ echo "#!/bin/bash
 function fix_file() {
   if [[ -f \$3 ]]; then
     if echo \"\$2 \$3\" | \$1 -c - &>> /dev/null; then
-      echo \"File \$3 is correct!\"
+      echo \"---File \$3 is correct!\"
     else
-      echo \"Re-downloading incorrect file...\"
+      echo \"---Re-downloading incorrect file...\"
       wget -t 3 -O \$3 \$4
     fi
   else
-    echo \"Re-downloading non-existing file...\"
+    echo \"---Re-downloading non-existing file...\"
     wget -t 3 -O \$3 \$4
   fi
 }
@@ -76,7 +76,7 @@ function check_by_hash() {
 
 check_by_hash sha256sum "$mirror_path/var/BUGGY_SHA256"
 check_by_hash md5sum "$mirror_path/var/MD5"
-echo -e "Script for fixing files: $mirror_path/mirror/download_E.sh"
+echo -e "Script for fixing files: $fix_script"
 
 # =)
 echo "Script succesfully ended its work. Have a nice day!"
