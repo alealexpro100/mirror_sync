@@ -52,14 +52,20 @@ echo_d -e "\n# DEBIAN"
 for version in '#oldstable' stable '#testing' '#stretch' '#buster' bullseye '#bookworm' sid experimental; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 arm64 armhf src; do
-		echo_d "deb-$arch $mirror ${version} main non-free contrib"
+		components="main non-free contrib"
+		if [[ ($version == sid || $version == unstable || $version == experimental || $version == testing) || ($version == bookworm) ]]; then
+			components="${components} non-free-firmware"
+		fi
+		echo_d "deb-$arch $mirror ${version} $components"
 		if ! [[ $version == sid || $version == unstable || $version == experimental ]]; then
-			echo_d "deb-$arch $mirror ${version}-updates main non-free contrib"
-			echo_d "deb-$arch $mirror ${version}-backports main non-free contrib"
+			echo_d "deb-$arch $mirror ${version}-updates $components"
+			echo_d "deb-$arch $mirror ${version}-proposed-updates $components"
+			echo_d "deb-$arch $mirror ${version}-backports $components"
+			echo_d "deb-$arch $mirror ${version}-backports-sloppy $components"
 			if [[ $version == oldoldstable || $version == oldstable || $version == stretch || $version == buster ]]; then
-				echo_d "deb-$arch $s_mirror ${version}/updates main non-free contrib"
+				echo_d "deb-$arch $s_mirror ${version}/updates $components"
 			else
-				echo_d "deb-$arch $s_mirror ${version}-security main non-free contrib"
+				echo_d "deb-$arch $s_mirror ${version}-security $components"
 			fi
 		fi
 	done
