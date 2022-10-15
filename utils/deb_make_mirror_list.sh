@@ -49,7 +49,7 @@ s_mirror='https://security.debian.org'
 add_d "$mirror"
 add_d "$s_mirror"
 echo_d -e "\n# DEBIAN"
-for version in '#oldstable' stable '#testing' '#stretch' '#buster' bullseye '#bookworm' sid experimental; do
+for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid experimental; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 arm64 armhf src; do
 		components="main non-free contrib"
@@ -61,7 +61,9 @@ for version in '#oldstable' stable '#testing' '#stretch' '#buster' bullseye '#bo
 			echo_d "deb-$arch $mirror ${version}-updates $components"
 			echo_d "deb-$arch $mirror ${version}-proposed-updates $components"
 			echo_d "deb-$arch $mirror ${version}-backports $components"
-			echo_d "deb-$arch $mirror ${version}-backports-sloppy $components"
+			if [[ ! ($version == testing || $version == bookworm) ]]; then
+				echo_d "deb-$arch $mirror ${version}-backports-sloppy $components"
+			fi
 			if [[ $version == oldoldstable || $version == oldstable || $version == stretch || $version == buster ]]; then
 				echo_d "deb-$arch $s_mirror ${version}/updates $components"
 			else
@@ -76,11 +78,11 @@ arch=''; version=''
 mirror='https://www.deb-multimedia.org'
 add_d "$mirror"
 echo_d -e "\n# DEBIAN MULTIMEDIA"
-for version in '#oldstable' stable '#testing' '#stretch' '#buster' bullseye '#bookworm' sid; do
+for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free"
-		[[ $version == testing || $version == sid || $version == experimental || $arch == src ]] || echo_d "deb-$arch $mirror ${version}-backports main"
+		[[ $version == bookworm || $version == testing || $version == sid || $version == experimental || $arch == src ]] || echo_d "deb-$arch $mirror ${version}-backports main"
 	done
 	echo_d ''
 done
@@ -89,7 +91,7 @@ arch=''; version=''
 mirror='https://dl.winehq.org/wine-builds/debian'
 add_d "$mirror"
 echo_d -e "\n# WINE"
-for version in '#oldstable' stable '#testing' '#stretch' '#buster' bullseye '#bookworm' sid; do
+for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 src; do
 		[[ ($version == sid && $arch == src) || ($version == oldstable && $arch == all) || ($version == buster && $arch == all) ]] || echo_d "deb-$arch $mirror ${version} main"
@@ -133,7 +135,7 @@ arch=''; version=''
 mirror='https://liquorix.net/debian'
 add_d "$mirror"
 echo_d -e "\n# ZEN KERNEL (liquorix)"
-for version in '#oldstable' stable '#testing' '#stretch' '#buster' bullseye sid; do
+for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -198,7 +200,7 @@ arch=''; version=''
 mirror='#http://raspbian.raspberrypi.org/raspbian'
 add_d "$mirror"
 echo_d -e "\n# RASPBIAN"
-for version in '#oldstable' stable '#testing' '#stretch' '#buster' bullseye; do
+for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm; do
 	echo_d -e "# -- $version"
 	for arch in armhf src; do
 		echo_d "deb-$arch $mirror ${version} main contrib non-free rpi"
