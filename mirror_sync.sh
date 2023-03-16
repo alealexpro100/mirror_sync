@@ -10,8 +10,8 @@ set -e
 declare -gx MIRROR_DIR="/mnt/mirror"
 #declare -gx REPOS_DIR="$MIRROR_DIR/git"
 WORK_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
-#CPAN_MIRROR="rsync://cdimage.debian.org/mirror/CPAN"
-#CTAN_MIRROR="rsync://cdimage.debian.org/mirror/CTAN"
+CPAN_MIRROR="rsync://cdimage.debian.org/mirror/CPAN"
+CTAN_MIRROR="rsync://cdimage.debian.org/mirror/CTAN"
 ALPINE_MIRROR="rsync://mirrors.dotsrc.org/alpine" # ~272GB
 POSTMARKETOS_MIRROR="rsync://mirror.postmarketos.org/postmarketos" # ~24GB
 #POSTMARKETOS_IMAGES_MIRROR="rsync://mirror.postmarketos.org/images"
@@ -25,7 +25,7 @@ ARCH_MIRROR="rsync://mirrors.dotsrc.org/archlinux" # ~67GB
 #BLACKARCH_MIRROR="rsync://mirrors.dotsrc.org/blackarch"
 ARCHSTRIKE_MIRROR="rsync://cdimage.debian.org/mirror/archstrike.org" # ~22GB
 MIRROR_CHAOTIC_AUR="rsync://builds.garudalinux.org/chaotic/chaotic-aur" # ~71GB
-#ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
+ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 #SOLYDXK_MIRROR="rsync://cdimage.debian.org/mirror/solydxk.com"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux" # ~253GB
 #ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
@@ -53,7 +53,7 @@ function mirror_rsync() {
             echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
             [[ "$RSYNC_FILE" == "1" || -d "${*: -1}" ]] || mkdir -p "${*: -1}"
             rsync --contimeout=20 --timeout=40 --recursive --links --copy-unsafe-links --times --sparse \
-                --delete --delete-after --delete-excluded \
+                --delete --delete-after --delete-excluded --bwlimit=8192 \
                 --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}! Code exit is $?."
             echo -e "}\n"
         fi
@@ -113,7 +113,7 @@ mirror_rsync $ARCH_SOURCE_MIRROR/ arch_sources
 mirror_rsync --exclude="arm*/" $ARCHARM_MIRROR/ archlinux-arm
 mirror_rsync $BLACKARCH_MIRROR/ blackarch
 mirror_rsync $MIRROR_CHAOTIC_AUR/ chaotic-aur
-mirror_rsync --exclude="arm*/" $ARCHCN_MIRROR/ archlinuxcn
+mirror_rsync --exclude="arm*/" --exclude="aarch64/" $ARCHCN_MIRROR/ archlinuxcn
 mirror_rsync $ARCH32_MIRROR/ archlinux32
 mirror_rsync $ARTIX_MIRROR/ artix-linux/repos
 mirror_rsync $ARTIX_UNIVERSE_MIRROR/ artix-linux/universe

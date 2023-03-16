@@ -31,8 +31,10 @@ set checksums = 1
 # set postmirror_script $var_path/postmirror.sh
 set run_postmirror 0
 
-set nthreads     20
+set nthreads    120
 set _tilde 0
+set downloader aria2c
+set limit_rate 25m
 #
 ############# end config ##############
 
@@ -46,8 +48,10 @@ set _tilde 0
 arch=''; version=''
 mirror='https://deb.debian.org/debian'
 s_mirror='https://security.debian.org'
+d_mirror='http://debug.mirrors.debian.org/debian-debug'
 add_d "$mirror"
 add_d "$s_mirror"
+#add_d "$d_mirror"
 echo_d -e "\n# DEBIAN"
 for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid experimental; do
 	echo_d -e "# -- $version"
@@ -57,12 +61,16 @@ for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookwor
 			components="${components} non-free-firmware"
 		fi
 		echo_d "deb-$arch $mirror ${version} $components"
+		#echo_d "deb-$arch $d_mirror ${version}-debug $components"
 		if ! [[ $version == sid || $version == unstable || $version == experimental ]]; then
 			echo_d "deb-$arch $mirror ${version}-updates $components"
 			echo_d "deb-$arch $mirror ${version}-proposed-updates $components"
+			#echo_d "deb-$arch $d_mirror ${version}-proposed-updates-debug $components"
 			echo_d "deb-$arch $mirror ${version}-backports $components"
+			#echo_d "deb-$arch $d_mirror ${version}-backports-debug $components"
 			if [[ ! ($version == testing || $version == bookworm) ]]; then
 				echo_d "deb-$arch $mirror ${version}-backports-sloppy $components"
+				#[[ $version == bullseye ]] || echo_d "deb-$arch $d_mirror ${version}-backports-sloppy-debug $components"
 			fi
 			if [[ $version == oldoldstable || $version == oldstable || $version == stretch || $version == buster ]]; then
 				echo_d "deb-$arch $s_mirror ${version}/updates $components"
@@ -70,6 +78,18 @@ for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookwor
 				echo_d "deb-$arch $s_mirror ${version}-security $components"
 			fi
 		fi
+	done
+	echo_d ''
+done
+
+arch=''; version=''
+mirror='https://fasttrack.debian.net/debian-fasttrack'
+add_d "$mirror"
+echo_d -e "\n# DEBIAN FASTTRACK"
+for version in '#buster-fasttrack' '#buster-backports' bullseye-backports-staging bullseye-fasttrack; do
+	echo_d -e "# -- $version"
+	for arch in all amd64 i386 arm64 armhf src; do
+		echo_d "deb-$arch $mirror ${version} main contrib non-free"
 	done
 	echo_d ''
 done

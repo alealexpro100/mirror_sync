@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#based on https://raw.githubusercontent.com/Stifler6996/apt-mirror/master/apt-mirror
+# based on https://raw.githubusercontent.com/chutzimir/apt-mirror/dev/apt-mirror
 =pod
 
 =head1 NAME
@@ -109,18 +109,23 @@ my %config_variables = (
     "_contents"   => 1,
     "_autoclean"  => 0,
     "_tilde"      => 0,
-    "_plus"       => 0,
+    "_plus"      => 0,
     "limit_rate"  => '100m',
+    "downloader"  => 'wget',
     "run_postmirror"       => 1,
     "auth_no_challenge"    => 0,
     "no_check_certificate" => 0,
     "unlink"               => 0,
+    "paranoid"             => 0,
     "postmirror_script"    => '$var_path/postmirror.sh',
     "use_proxy"            => 'off',
     "http_proxy"           => '',
     "https_proxy"          => '',
     "proxy_user"           => '',
-    "proxy_password"       => ''
+    "proxy_password"       => '',
+    "certificate"          => '',
+    "private_key"          => '',
+    "ca_certificate"       => '',
 );
 
 my @config_binaries = ();
@@ -132,12 +137,37 @@ my @childrens       = ();
 my %skipclean       = ();
 my %clean_directory = ();
 my @hash_strength   = qw(SHA512 SHA256 SHA1 MD5Sum);
+my %packages_hashes = (
+    SHA512 => "SHA512",
+    SHA256 => "SHA256",
+    SHA1   => "SHA1",
+    MD5Sum => "MD5sum",
+);
+my %sources_hashes = (
+    SHA512 => "Checksums-Sha512",
+    SHA256 => "Checksums-Sha256",
+    SHA1   => "Checksums-Sha1",
+    MD5Sum => "Files",
+);
+my %verify_commands = (
+    SHA512 => "sha512sum",
+    SHA256 => "sha256sum",
+    SHA1   => "sha1sum",
+    MD5Sum => "md5sum",
+);
+my %checksum_filenames = (
+    SHA512 => "SHA512",
+    SHA256 => "SHA256",
+    SHA1   => "SHA1",
+    MD5Sum => "MD5",
+);
 
 # Mapping of files downloaded from a by-hash directory to their canonical locations.
 my %hashsum_to_files = ();
 
 # Mapping of all the checksums for a given canonical filename.
 my %file_to_hashsums;
+my %urls_checksums = ();
 
 ######################################################################################
 ## Setting up $config_file variable
@@ -153,6 +183,32 @@ if ( $_ = shift )
 chomp $config_variables{"defaultarch"};
 
 ######################################################################################
+
+##################################################
+## Make sure we have all the compression commands
+my @compression_extensions = qw(xz gz bz2);
+my %compression_commands = (
+    xz   => "xz",
+    gz   => "gzip",
+    bz2  => "bzip2",
+);
+
+sub check_compression_commands
+{
+    my $success = 1;
+    foreach (@compression_extensions)
+    {
+        unless("dummy" eq `echo -n dummy | ${compression_commands{$_}} 2>/dev/null | ${compression_commands{$_}} -d 2>/dev/null`)
+        {
+            warn("apt-mirror: You must have a working ${compression_commands{$_}} in your \$PATH to decompress .${_} files.\n");
+            $success = 0;
+        }
+    }
+    return $success;
+}
+
+die("apt-mirror: Failing due to missing compression commands.\n") unless check_compression_commands;
+
 ## Common subroutines
 
 sub round_number
@@ -235,6 +291,33 @@ sub unlock_aptmirror
     unlink( get_variable("var_path") . "/apt-mirror.lock" );
 }
 
+sub delete_corrupted_files
+{
+    my $stage = shift;
+    my $found = 0;
+    foreach my $hash (@hash_strength)
+    {
+        my $file = get_variable("var_path") . "/${stage}-${hash}";
+        if (-s $file)
+        {
+            my $pipe;
+            open $pipe, "-|", qq(env LC_ALL=C ${verify_commands{$hash}} --check --quiet ${file} 2>/dev/null) or die "Failed at ${verify_commands{$hash}} --check --quiet ${file}\n";
+            while (<$pipe>)
+            {
+                my ($filename) = /^(.*): FAILED/;
+                if (-f $filename)
+                {
+                    $found++;
+                    print "$filename is corrupted, deleting....\n";
+                    unlink $filename or die "Cannot delete $filename.\n";
+                }
+            }
+            close $pipe;
+        }
+    }
+    return $found;
+}
+
 sub download_urls
 {
     my $stage = shift;
@@ -246,53 +329,105 @@ sub download_urls
     local $| = 1;
 
     @urls = @_;
-    $nthreads = @urls if @urls < $nthreads;
 
-    if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
-    if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
-    if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
-    if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
-    {
-        if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
-        if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
-        if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
-        if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
-        if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
+    my $downloader = get_variable("downloader");
+
+    if ( $downloader eq "wget" ) {
+        $nthreads = @urls if @urls < $nthreads;
+        if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--auth-no-challenge" ); }
+        if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--no-check-certificate" ); }
+        if ( get_variable("unlink") == 1 )               { push( @args, "--unlink" ); }
+        if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
+        {
+            if ( length( get_variable("http_proxy") ) || length( get_variable("https_proxy") ) ) { push( @args, "-e use_proxy=yes" ); }
+            if ( length( get_variable("http_proxy") ) ) { push( @args, "-e http_proxy=" . get_variable("http_proxy") ); }
+            if ( length( get_variable("https_proxy") ) ) { push( @args, "-e https_proxy=" . get_variable("https_proxy") ); }
+            if ( length( get_variable("proxy_user") ) ) { push( @args, "-e proxy_user=" . get_variable("proxy_user") ); }
+            if ( length( get_variable("proxy_password") ) ) { push( @args, "-e proxy_password=" . get_variable("proxy_password") ); }
+        }
+        if ( length( get_variable("certificate") ) ) { push( @args, "--certificate=" . get_variable("certificate") ); }
+        if ( length( get_variable("private_key") ) ) { push( @args, "--private-key=" . get_variable("private_key") ); }
+        if ( length( get_variable("ca_certificate") ) ) { push( @args, "--ca-certificate=" . get_variable("ca_certificate") ); }
+        push @args, "--no-if-modified-since";
+        print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
+
+        while ( scalar @urls )
+        {
+            my @part = splice( @urls, 0, int( @urls / $nthreads ) );
+            open URLS, ">" . get_variable("var_path") . "/$stage-urls.$i" or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
+            foreach (@part) { print URLS "$_\n"; }
+            close URLS or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
+
+            $pid = fork();
+
+            die("apt-mirror: can't do fork in download_urls") if !defined($pid);
+
+            if ( $pid == 0 )
+            {
+                exec 'wget', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-t', '5', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+
+                # shouldn't reach this unless exec fails
+                die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+            }
+
+            push @childrens, $pid;
+            $i++;
+            $nthreads--;
+        }
     }
-    print "Downloading " . scalar(@urls) . " $stage files using $nthreads threads...\n";
-
-    my @url_fds;
-    for ($i=0; $i<$nthreads; $i++)
+    elsif ($downloader eq "aria2c")
     {
-        open ( $url_fds[$i], ">", get_variable("var_path") . "/$stage-urls.$i") or die("apt-mirror: can't write to intermediate file ($stage-urls.$i)");
-    }
-
-    for ($i=scalar(@urls)-1; $i>=0; $i--)
-    {
-        my $thread = $i % $nthreads;
-        print { $url_fds[$thread] } $urls[$i] . "\n";
-    }
-
-    foreach (@url_fds) {
-        close $_ or die("apt-mirror: can't close intermediate file ($stage-urls.$i)");
-    }
-
-    for ($i=0; $i<$nthreads; $i++)
-    {
-
+        if ( get_variable("auth_no_challenge") == 1 )    { push( @args, "--http-auth-challenge=true" ); }
+        if ( get_variable("no_check_certificate") == 1 ) { push( @args, "--check-certificate=false" ); }
+        if ( length( get_variable("use_proxy") ) && ( get_variable("use_proxy") eq 'yes' || get_variable("use_proxy") eq 'on' ) )
+        {
+            if ( length( get_variable("http_proxy") ) ) { push( @args, "--http-proxy=" . get_variable("http_proxy") ); }
+            if ( length( get_variable("https_proxy") ) ) { push( @args, "--https-proxy=" . get_variable("https_proxy") ); }
+            if ( length( get_variable("proxy_user") ) ) {
+                push( @args, "--http-proxy-user=" . get_variable("proxy_user") );
+                push( @args, "--https-proxy-user=" . get_variable("proxy_user") );
+            }
+            if ( length( get_variable("proxy_password") ) ) {
+                push( @args, "--http-proxy-passwd=" . get_variable("proxy_password") );
+                push( @args, "--https-proxy-passwd=" . get_variable("proxy_password") );
+            }
+        }
+        if ( length( get_variable("certificate") ) ) { push( @args, "--certificate=" . get_variable("certificate") ); }
+        if ( length( get_variable("private_key") ) ) { push( @args, "--private-key=" . get_variable("private_key") ); }
+        if ( length( get_variable("ca_certificate") ) ) { push( @args, "--ca-certificate=" . get_variable("ca_certificate") ); }
+        open URLS, ">" . get_variable("var_path") . "/${stage}-urls" or die("apt-mirror: can't write to intermediate file (${stage}-urls)");
+        foreach (@urls) {
+            print URLS $_ . "\n";
+            print URLS "  out=" . sanitise_uri($_) . "\n";
+        }
+        close URLS or die("apt-mirror: can't close intermediate file (${stage}-urls)");
         $pid = fork();
-
         die("apt-mirror: can't do fork in download_urls") if !defined($pid);
-
         if ( $pid == 0 )
         {
-            exec 'wget', '--no-if-modified-since', '--no-cache', '--limit-rate=' . get_variable("limit_rate"), '-T', '60', '-t', '1', '-r', '-N', '-l', 'inf', '-o', get_variable("var_path") . "/$stage-log.$i", '-i', get_variable("var_path") . "/$stage-urls.$i", @args;
+            unlink(get_variable("var_path") . "/${stage}-log");
+            exec 'aria2c',
+                '--quiet=true',
+                '--allow-overwrite=true',
+                '--http-no-cache=true',
+                '--remote-time=true',
+                '--max-overall-download-limit=' . get_variable("limit_rate"),
+                '--max-concurrent-downloads=' . $nthreads,
+                '--max-connection-per-server='. ( $nthreads >= 16 ? 16 : $nthreads ),
+                '--log-level=notice',
+                '--log=' . get_variable("var_path") . "/${stage}-log",
+                '--input-file=' . get_variable("var_path") . "/${stage}-urls",
+                @args;
 
             # shouldn't reach this unless exec fails
-            die("\n\nCould not run wget, please make sure its installed and in your path\n\n");
+            die("\n\nCould not run ${downloader}, please make sure it is installed and in your path\n\n");
         }
 
         push @childrens, $pid;
+    }
+    else
+    {
+        die("\n\nUnsupported downloader ${downloader}. Only 'wget' and 'aria2c' are supported.\n\n");
     }
 
     print "Begin time: " . localtime() . "\n[" . scalar(@childrens) . "]... ";
@@ -303,6 +438,16 @@ sub download_urls
         print "[" . scalar(@childrens) . "]... ";
     }
     print "\nEnd time: " . localtime() . "\n\n";
+
+    if (get_variable("paranoid"))
+    {
+        print "Verifying integrity of downloaded ${stage} files...\n";
+        if (delete_corrupted_files($stage) > 0)
+        {
+            die "Aborting due to downloading corrupted ${stage} files.\n";
+        }
+        print "Downloaded ${stage} files are correct.\n";
+    }
 
     if (scalar keys %hashsum_to_files > 0)
     {
@@ -348,17 +493,6 @@ sub parse_config_line
     return %config;
 }
 
-sub sanitise_uri
-{
-    my $uri = shift;
-    $uri =~ s[^(\w+)://][];
-    $uri =~ s/^([^@]+)?@?// if (split '/',$uri)[0] =~ /@/;
-    $uri =~ s/~/\%7E/g if get_variable("_tilde");
-    $uri =~ s/\+/\%2B/g if get_variable("_plus");
-    $uri =~ s[/$][];
-    return $uri;
-}
-
 open CONFIG, "<$config_file" or die("apt-mirror: can't open config file ($config_file)");
 while (<CONFIG>)
 {
@@ -379,7 +513,11 @@ while (<CONFIG>)
         push @config_sources, [ $config_line{'uri'}, @{$config_line{'components'}} ];
         next;
     } elsif ( $config_line{'type'} =~ /(skip-clean|clean)/ ) {
-        my $link = sanitise_uri($config_line{'uri'});
+        my $link = $config_line{'uri'};
+        $link =~ s[^(\w+)://][];
+        $link =~ s[/$][];
+        $link =~ s[~][%7E]g if get_variable("_tilde");
+        $link =~ s[\+][%2B]g if get_variable("_plus");
         if ( $config_line{'type'} eq "skip-clean" ) {
             $skipclean{ $link } = 1;
         } elsif ( $config_line{'type'} eq "clean" ) {
@@ -415,6 +553,25 @@ lock_aptmirror();
 my %urls_to_download = ();
 my ( $url, $arch );
 
+my %files_fh;
+
+sub open_checksum_files
+{
+    my $stage = shift;
+    foreach my $hash (@hash_strength) {
+        open $files_fh{"${stage}-${hash}"}, ">", get_variable("var_path") . "/${stage}-${hash}";
+    }
+}
+
+sub close_checksum_files
+{
+    my $stage = shift;
+    foreach my $hash (@hash_strength) {
+        close $files_fh{"${stage}-${hash}"};
+    }
+}
+
+
 sub remove_double_slashes
 {
     local $_ = shift;
@@ -428,16 +585,20 @@ sub remove_double_slashes
 
 sub add_url_to_download
 {
+    my $stage = shift;
     my $url = remove_double_slashes(shift);
     my $size = shift;
     my $strongest_hash = shift;
     my $hash = shift;
     my $hashsum = shift;
+    my $acquire_by_hash = shift;
 
-    my $canonical_filename = sanitise_uri($url);
+    my $canonical_filename = $url;
+    $canonical_filename =~ s[^(\w+)://][];
+    $canonical_filename =~ s[~][%7E]g if get_variable("_tilde");
     $skipclean{$canonical_filename} = 1;
 
-    if ($hashsum)
+    if ($acquire_by_hash)
     {
         # If the optional hashsum was passed as an argument
         # - download the strongest hash only
@@ -456,6 +617,8 @@ sub add_url_to_download
             $hashsum_to_files{$hashsum_filename} ||= [];
             push @{$hashsum_to_files{$hashsum_filename}}, $canonical_filename;
             $urls_to_download{$url} = $size;
+            $urls_checksums{$url} = [ $hash, $hashsum ];
+            print { $files_fh{"${stage}-${hash}"} } "${hashsum}  ${hashsum_filename}\n";
         } else {
             # We are not going to download using this checksum, but we still
             # need to know where to put the checksum.
@@ -465,6 +628,11 @@ sub add_url_to_download
     } else {
         # Not using by-hash, so download the file only.
         $urls_to_download{$url} = $size;
+        if ($strongest_hash and ($hash eq $strongest_hash))
+        {
+            $urls_checksums{$url} = [ $hash, $hashsum ];
+            print { $files_fh{"${stage}-${hash}"} } "${hashsum}  ${canonical_filename}\n";
+        }
     }
 }
 
@@ -478,12 +646,13 @@ foreach (@config_sources)
     }
     else
     {
+        # https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
         $url = $uri . "/" . $distribution . "/";
     }
 
-    add_url_to_download( $url . "InRelease" );
-    add_url_to_download( $url . "Release" );
-    add_url_to_download( $url . "Release.gpg" );
+    add_url_to_download( "release", $url . "InRelease" );
+    add_url_to_download( "release", $url . "Release" );
+    add_url_to_download( "release", $url . "Release.gpg" );
 }
 
 foreach (@config_binaries)
@@ -497,12 +666,13 @@ foreach (@config_binaries)
     }
     else
     {
+        # https://wiki.debian.org/DebianRepository/Format#Flat_Repository_Format
         $url = $uri . "/" . $distribution . "/";
     }
 
-    add_url_to_download( $url . "InRelease" );
-    add_url_to_download( $url . "Release" );
-    add_url_to_download( $url . "Release.gpg" );
+    add_url_to_download( "release", $url . "InRelease" );
+    add_url_to_download( "release", $url . "Release" );
+    add_url_to_download( "release", $url . "Release.gpg" );
 
 }
 
@@ -514,6 +684,17 @@ download_urls( "release", @release_urls );
 ## Download all relevant metadata
 
 %urls_to_download = ();
+open_checksum_files("index");
+
+sub sanitise_uri
+{
+    my $uri = shift;
+    $uri =~ s[^(\w+)://][];
+    $uri =~ s/^([^@]+)?@?// if $uri =~ /@/;
+    $uri =~ s/~/\%7E/g if get_variable("_tilde");
+    $uri =~ s/\+/\%2B/g if get_variable("_plus");
+    return $uri;
+}
 
 sub find_metadata_in_release
 {
@@ -523,7 +704,7 @@ sub find_metadata_in_release
     my ( $release_uri, $release_path, $line ) = '';
     my $component_regex = undef;
     my $arch_regex = "(?:${arch}|all)";
-    my $compressed_extension_regex = '(?:\.(?:gz|bz2|xz|lzma))$';
+    my $compressed_extension_regex = '(?:\.(?:gz|bz2|xz))$';
     my $dist_uri;
     my $hash_type_regex = "(?:" . join("|", @hash_strength) . ")";
 
@@ -597,11 +778,9 @@ sub find_metadata_in_release
                             # Debian repository format https://wiki.debian.org/DebianRepository/Format#Debian_Repository_Format
                             if (
                                 (
-                                    $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}}
-                                ) or (
                                     $filename =~ m{^Contents-${arch_regex}${compressed_extension_regex}}
                                 ) or (
-                                    $filename =~ m{^Packages${compressed_extension_regex}}
+                                    $filename =~ m{^${component_regex}/Contents-${arch_regex}${compressed_extension_regex}}
                                 ) or (
                                     $filename =~ m{^${component_regex}/binary-${arch_regex}/Packages${compressed_extension_regex}}
                                 ) or (
@@ -654,16 +833,17 @@ sub find_metadata_in_release
     close $stream;
 
     my $strongest_hash;
+    foreach (@hash_strength)
+    {
+        if ($avaiable_hashes{$_})
+        {
+            $strongest_hash = $_;
+            last;
+        }
+    }
+
     if ($acquire_by_hash)
     {
-        foreach (@hash_strength)
-        {
-            if ($avaiable_hashes{$_})
-            {
-                $strongest_hash = $_;
-                last;
-            }
-        }
         unless ($strongest_hash)
         {
             warn("Cannot find a supported hash in $release_uri, will download from canonical locations.");
@@ -676,11 +856,11 @@ sub find_metadata_in_release
         my ( $hashsum, $size, $filename, $hash ) = @{$_};
         if ($acquire_by_hash)
         {
-            add_url_to_download( $dist_uri . $filename, $size, $strongest_hash, $hash, $hashsum );
+            add_url_to_download( "index", $dist_uri . $filename, $size, $strongest_hash, $hash, $hashsum, 1 );
         }
         else
         {
-            add_url_to_download( $dist_uri . $filename, $size );
+            add_url_to_download( "index", $dist_uri . $filename, $size, $strongest_hash, $hash, $hashsum, 0 );
         }
     }
     return 1;
@@ -694,7 +874,7 @@ foreach (@config_binaries)
     unless (find_metadata_in_release( $arch, $uri, $distribution, @components))
     {
         # Insecure repo with no release file - try to get the well known indices
-        foreach my $file_extension (".gz", ".bz2", ".xz", ".lzma", "")
+        foreach my $file_extension (".gz", ".xz", ".bz2", "")
         {
             if (@components)
             {
@@ -710,7 +890,7 @@ foreach (@config_binaries)
                         "/dists/${distribution}/Contents-all",
                     )
                     {
-                        add_url_to_download( "${uri}/${path}${file_extension}" );
+                        add_url_to_download( "index", "${uri}/${path}${file_extension}" );
                     }
                 }
             } else {
@@ -721,7 +901,7 @@ foreach (@config_binaries)
                     "${distribution}/Contents-all",
                 )
                 {
-                    add_url_to_download( "${uri}/${path}${file_extension}" );
+                    add_url_to_download( "index", "${uri}/${path}${file_extension}" );
                 }
             }
         }
@@ -735,7 +915,7 @@ foreach (@config_sources)
     unless (find_metadata_in_release( "source", $uri, $distribution, @components))
     {
         # Insecure repo with no release file - try to get the well known indices
-        foreach my $file_extension (".gz", ".bz2", ".xz", ".lzma", "")
+        foreach my $file_extension (".gz", ".xz", ".bz2", "")
         {
             if (@components)
             {
@@ -745,11 +925,11 @@ foreach (@config_sources)
                     "${distribution}/Contents-source",
                 )
                 {
-                    add_url_to_download( "${uri}/${path}${file_extension}" );
+                    add_url_to_download( "index", "${uri}/${path}${file_extension}" );
                 }
             } else {
                 # Flat repo
-                add_url_to_download( "${uri}/${distribution}/Sources${file_extension}" );
+                add_url_to_download( "index", "${uri}/${distribution}/Sources${file_extension}" );
             }
         }
     }
@@ -758,19 +938,21 @@ print "]\n\n";
 
 @index_urls = sort keys %urls_to_download;
 download_urls( "index", @index_urls );
+close_checksum_files("index");
 
 ######################################################################################
 ## Main download preparations
 
 %urls_to_download = ();
 
-open FILES_ALL, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
-open FILES_BUGGY, ">" . get_variable("var_path") . "/BUGGY" or die("apt-mirror: can't write to intermediate file (BUGGY)");
-open FILES_BUGGY_SHA256, ">" . get_variable("var_path") . "/BUGGY_SHA256" or die("apt-mirror: can't write to intermediate file (BUGGY_SHA256)");
-open FILES_NEW, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
-open FILES_MD5, ">" . get_variable("var_path") . "/MD5" or die("apt-mirror: can't write to intermediate file (MD5)");
-open FILES_SHA1, ">" . get_variable("var_path") . "/SHA1" or die("apt-mirror: can't write to intermediate file (SHA1)");
-open FILES_SHA256, ">" . get_variable("var_path") . "/SHA256" or die("apt-mirror: can't write to intermediate file (SHA256)");
+open_checksum_files("archive");
+
+open $files_fh{ALL}, ">" . get_variable("var_path") . "/ALL" or die("apt-mirror: can't write to intermediate file (ALL)");
+open $files_fh{NEW}, ">" . get_variable("var_path") . "/NEW" or die("apt-mirror: can't write to intermediate file (NEW)");
+foreach my $hash (@hash_strength)
+{
+    open $files_fh{$hash}, ">" . get_variable("var_path") . "/" . ${checksum_filenames{$hash}} or die("apt-mirror: can't write to intermediate file (${hash})");
+}
 
 my %stat_cache = ();
 
@@ -798,22 +980,9 @@ sub need_update
     return 1 unless ($size);
     return 0 if $size_on_server == $size;
 
-    if ( get_variable("unlink") == 1 ) {
-        unlink $filename;
-    }
+    # The file is corrupted, throw it away so we can download it again
+    unlink $filename;
     return 1;
-}
-
-sub remove_spaces($)
-{
-    my $hashref = shift;
-    foreach ( keys %{$hashref} )
-    {
-        while ( substr( $hashref->{$_}, 0, 1 ) eq ' ' )
-        {
-            substr( $hashref->{$_}, 0, 1 ) = '';
-        }
-    }
 }
 
 sub process_index
@@ -827,21 +996,13 @@ sub process_index
     local $/ = "\n\n";
     $mirror = get_variable("mirror_path") . "/" . $path;
 
-    if (-e "$path/$index.gz" )
+    foreach my $extension (@compression_extensions)
     {
-        system("gunzip < $path/$index.gz > $path/$index");
-    }
-    elsif (-e "$path/$index.xz" )
-    {
-        system("xz -d < $path/$index.xz > $path/$index");
-    }
-    elsif (-e "$path/$index.lzma" )
-    {
-        system("xz -d < $path/$index.xz > $path/$index");
-    }
-    elsif (-e "$path/$index.bz2" )
-    {
-        system("bzip2 -d < $path/$index.bz2 > $path/$index");
+        if (-e "$path/$index.$extension" )
+        {
+            system("${compression_commands{$extension}} -d < $path/$index.$extension > $path/$index");
+            last;
+        }
     }
 
     unless ( open STREAM, "<$path/$index" )
@@ -858,63 +1019,68 @@ sub process_index
     {
         local $/ = "\n";
         chomp $package;
-        my ( undef, %lines ) = split( /^([\w\-]+:)/m, $package );
+        my ( undef, %lines ) = split( /^([\w\-]+): */m, $package );
 
-        $lines{"Directory:"} = "" unless defined $lines{"Directory:"};
         chomp(%lines);
-        remove_spaces( \%lines );
 
-        if ( exists $lines{"Filename:"} )
+        if ( exists $lines{"Filename"} )
         {    # Packages index
-            $skipclean{ remove_double_slashes( $path . "/" . $lines{"Filename:"} ) } = 1;
-            print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n";
-            print FILES_MD5 $lines{"MD5sum:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"MD5sum:"};
-            print FILES_SHA1 $lines{"SHA1:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA1:"};
-            print FILES_SHA256 $lines{"SHA256:"} . "  " . remove_double_slashes( $path . "/" . $lines{"Filename:"} ) . "\n" if defined $lines{"SHA256:"};
-            if ( need_update( $mirror . "/" . $lines{"Filename:"}, $lines{"Size:"} ) )
+            my $filename = remove_double_slashes( $path . "/" . $lines{"Filename"});
+            $skipclean{ $filename } and next;
+            $skipclean{ $filename } = 1;
+            print { $files_fh{ALL} } $filename . "\n";
+            foreach my $hash (@hash_strength)
             {
-                print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Filename:"} ) . "\n";
-                add_url_to_download( $uri . "/" . $lines{"Filename:"}, $lines{"Size:"} );
+                my $index_hash = $packages_hashes{$hash};
+                print { $files_fh{$hash} } $lines{$index_hash} . "  " . $filename . "\n" if $lines{$index_hash};
+            }
+            if ( need_update( $mirror . "/" . $lines{"Filename"}, $lines{"Size"} ) )
+            {
+                my $hashsum = undef;
+                my $hash = undef;
+                foreach (@hash_strength)
+                {
+                    $hash = $_;
+                    my $index_hash = $packages_hashes{$hash};
+                    if ($lines{$index_hash})
+                    {
+                        $hashsum = $lines{$index_hash};
+                        last;
+                    }
+                }
+                print { $files_fh{NEW} } $filename. "\n";
+                add_url_to_download( "archive", $uri . "/" . $lines{"Filename"}, $lines{"Size"}, $hash, $hash, $hashsum, 0 );
             }
         }
-        elsif ( exists $lines{"Files:"} )
+        else
         {    # Sources index
-            foreach ( split( /\n/, $lines{"Files:"} ) )
+            $lines{"Directory"} = "" unless defined $lines{"Directory"};
+            foreach my $hash (@hash_strength)
             {
-                next if $_ eq '';
-                my @file = split;
-                die("apt-mirror: invalid Sources format") if @file != 3;
-                $skipclean{ remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) } = 1;
-                print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                print FILES_MD5 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
+                my $index_hash = $sources_hashes{$hash};
+                if ($lines{$index_hash})
                 {
-                    print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                    add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
+                    foreach ( split( /\n/, $lines{$index_hash} ) )
+                    {
+                        next if $_ eq '';
+                        my @file = split;
+                        die("apt-mirror: invalid Sources format") if @file != 3;
+                        my $download_url = $uri . "/" . $lines{"Directory"} . "/" . $file[2];
+                        my $filename = remove_double_slashes( $path . "/" . $lines{"Directory"} . "/" . $file[2] );
+
+                        $skipclean{ $filename } and next;
+                        $skipclean{ $filename } = 1;
+
+                        print { $files_fh{$hash} } $file[0] . "  " . ${filename} . "\n";
+                        print { $files_fh{ALL} } ${filename} . "\n";
+                        if ( need_update( $mirror . "/" . $lines{"Directory"} . "/" . $file[2], $file[1] ) )
+                        {
+                            print { $files_fh{NEW} } ${filename} . "\n";
+                            add_url_to_download( "archive", $uri . "/" . $lines{"Directory"} . "/" . $file[2], $file[1], $hash, $hash, $file[0], 0 );
+                        }
+                    }
                 }
             }
-        }
-        elsif ( exists $lines{"Checksums-Sha256:"} )
-        {    # Sources index (SHA256)
-            foreach ( split( /\n/, $lines{"Checksums-Sha256:"} ) )
-            {
-                next if $_ eq '';
-                my @file = split;
-                die("apt-mirror: invalid Sources format") if @file != 3;
-                $skipclean{ remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) } = 1;
-                print FILES_ALL remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                print FILES_BUGGY remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                print FILES_BUGGY_SHA256 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                print FILES_SHA256 $file[0] . "  " . remove_double_slashes( $path . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                if ( need_update( $mirror . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] ) )
-                {
-                    print FILES_NEW remove_double_slashes( $uri . "/" . $lines{"Directory:"} . "/" . $file[2] ) . "\n";
-                    add_url_to_download( $uri . "/" . $lines{"Directory:"} . "/" . $file[2], $file[1] );
-                }
-            }
-        }
-        else {
-            warn("apt-mirror: Looks like your ISP corrupts files! File is corrupted and skipped.")
         }
     }
 
@@ -964,13 +1130,10 @@ clear_stat_cache();
 
 print "]\n\n";
 
-close FILES_ALL;
-close FILES_BUGGY;
-close FILES_BUGGY_SHA256;
-close FILES_NEW;
-close FILES_MD5;
-close FILES_SHA1;
-close FILES_SHA256;
+foreach my $fh (values %files_fh)
+{
+    close $fh;
+}
 
 ######################################################################################
 ## Main download
@@ -988,6 +1151,7 @@ my $size_output = format_bytes($need_bytes);
 print "$size_output will be downloaded into archive.\n";
 
 download_urls( "archive", sort keys %urls_to_download );
+close_checksum_files("archive");
 
 ######################################################################################
 ## Copy skel to main archive
@@ -1133,7 +1297,7 @@ else
     print CLEAN "echo 'Removing $total unnecessary directories...'\n";
     foreach (@rm_dirs)
     {
-        print CLEAN "if test -d '$_'; then rm -fr '$_'; fi\n";
+        print CLEAN "if test -d '$_'; then rm -r '$_'; fi\n";
         print CLEAN "echo -n '[" . int( 100 * $i / $total ) . "\%]'\n" unless $i % 50;
         print CLEAN "echo -n .\n";
         $i++;
