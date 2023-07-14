@@ -130,7 +130,7 @@ done
 arch=''; version=''
 mirror='https://repo.antixlinux.com'
 echo_d -e "\n# ANTIX (Based on debian)"
-for version in '#stretch' '#buster' bullseye sid; do
+for version in '#stretch' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror/$version ${version} main nosystemd nonfree"
@@ -143,7 +143,7 @@ arch=''; version=''
 mirror='http://mxrepo.com/mx/repo'
 add_d "$mirror"
 echo_d -e "\n# MX-PACKAGES (stable)"
-for version in '#stretch' '#buster' bullseye; do
+for version in '#stretch' '#buster' bullseye bookworm; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main non-free ahs"
@@ -232,7 +232,7 @@ arch=''; version=''
 mirror='https://apt.armbian.com'
 add_d "$mirror"
 echo_d -e "\n# ARMBIAN"
-for version in '#focal' '#buster' bullseye sid; do
+for version in '#focal' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in arm64 armhf; do
 		echo_d "deb-$arch $mirror ${version} main $version-utils $version-desktop"
@@ -316,7 +316,7 @@ arch=''; version=''
 mirror='http://download.proxmox.com/debian/pve'
 add_d "$mirror"
 echo_d -e "\n# PROXMOX"
-for version in '#stretch' '#buster' bullseye; do
+for version in '#stretch' '#buster' bullseye bookworm; do
 	echo_d -e "# -- $version"
 	echo_d "deb-amd64 $mirror ${version} pve-no-subscription pvetest"
 	echo_d ''
@@ -365,7 +365,7 @@ arch=''; version=''
 mirror='#https://deb.torproject.org/torproject.org'
 add_d "$mirror"
 echo_d -e "\n# TOR"
-for version in '#stretch' '#buster' bullseye sid; do
+for version in '#stretch' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 arm64; do
 		echo_d "deb-$arch $mirror ${version} contrib non-free"
@@ -376,7 +376,7 @@ arch=''; version=''
 mirror='#http://archive.turnkeylinux.org/debian'
 add_d "$mirror"
 echo_d -e "\n# TURNKEY"
-for version in '#stretch' '#buster' bullseye; do
+for version in '#stretch' '#buster' bullseye bookworm; do
 	echo_d -e "# -- $version"
 	for arch in all amd64; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -448,7 +448,7 @@ arch=''; version=''
 mirror='https://nginx.org/packages/debian'
 add_d "$mirror"
 echo_d -e "\n# NGINX"
-for version in '#stretch' '#buster' bullseye; do
+for version in '#stretch' '#buster' bullseye bookworm; do
 	echo_d -e "# -- $version"
 	for arch in amd64 arm64; do
 		echo_d "deb-$arch $mirror ${version} nginx"
