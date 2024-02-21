@@ -114,7 +114,7 @@ echo_d -e "\n# WINE"
 for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 src; do
-		[[ ($version == sid && $arch == src) || ($version == oldstable && $arch == all) || ($version == buster && $arch == all) ]] || echo_d "deb-$arch $mirror ${version} main"
+		[[ ($version == sid && $arch == src) || ($version == oldstable && $arch == all) || ($version == buster && $arch == all) || ($version == testing && $arch == all) ]] || echo_d "deb-$arch $mirror ${version} main"
 	done
 	echo_d ''
 done
@@ -157,7 +157,7 @@ add_d "$mirror"
 echo_d -e "\n# ZEN KERNEL (liquorix)"
 for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
 	echo_d -e "# -- $version"
-	for arch in amd64 i386 src; do
+	for arch in amd64 '#i386' src; do
 		echo_d "deb-$arch $mirror ${version} main"
 	done
 	echo_d ''
@@ -304,7 +304,7 @@ done
 echo_d ''
 version="4.7_arm"
 echo_d -e "# -- $version"
-for arch in arm64 armhf; do
+for arch in arm64 '#armhf'; do
 	echo_d "deb-$arch $mirror/4.7_arm/repository-main ${version} main contrib non-free baikal1 huawei1"
 	echo_d "deb-$arch $mirror/4.7_arm/repository-update ${version} main contrib non-free baikal1 huawei1"
 	echo_d "deb-$arch $mirror/4.7_arm/repository-base ${version} main contrib non-free baikal1 huawei1"
