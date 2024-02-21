@@ -77,7 +77,7 @@ function check_by_hash() {
 # Quick idea: read `ALL` file, paste hashes from other files to `hashes` array and hash_types to `hash_types`.
 
 
-check_by_hash sha256sum "$mirror_path/var/BUGGY_SHA256"
+check_by_hash sha256sum "$mirror_path/var/SHA256"
 check_by_hash md5sum "$mirror_path/var/MD5"
 echo -e "Script for fixing files: $fix_script"
 
