@@ -53,7 +53,7 @@ function mirror_rsync() {
             echo " [Mirroring from ${*: -2:1} to ${*: -1}...] {"
             [[ "$RSYNC_FILE" == "1" || -d "${*: -1}" ]] || mkdir -p "${*: -1}"
             rsync --contimeout=20 --timeout=40 --recursive --links --copy-unsafe-links --times --sparse \
-                --delete --delete-after --delete-excluded --bwlimit=8192 \
+                --delete --delete-after --delete-excluded \
                 --progress --stats --human-readable "$@" || echo "Failed to rsync ${*: -1}! Code exit is $?."
             echo -e "}\n"
         fi
@@ -67,10 +67,10 @@ function git_update() {
     name="${repo_name[1]}"
     echo " [Git update $name to $REPOS_DIR/$name...]"
     if [[ -d "$REPOS_DIR/$name/.git" ]]; then
-        git -C "$REPOS_DIR/$name" pull --all --prune --force -q --rebase || exit_text="update"
+        git -C "$REPOS_DIR/$name" remote update || exit_text="update"
     else
         mkdir -p "$REPOS_DIR/$name"
-        git clone "$repo" "$REPOS_DIR/$name" -q || exit_text="create"
+        git clone --mirror "$repo" "$REPOS_DIR/$name" -q || exit_text="create"
     fi
     if [[ -n $exit_text ]]; then
         echo "--Failed to $exit_text $name!--"
