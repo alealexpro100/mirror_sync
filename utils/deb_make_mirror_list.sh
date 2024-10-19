@@ -23,18 +23,15 @@ set base_path    /mnt/mirror/debian/
 # set mirror_path  $base_path/mirror
 # set skel_path    $base_path/skel
 # set var_path     $base_path/var
-# set cleanscript $var_path/clean.sh
+# set cleanscript  $var_path/clean.sh
 # set defaultarch  <running host architecture>
 
-set checksums = 1
-
 # set postmirror_script $var_path/postmirror.sh
-set run_postmirror 0
+# set run_postmirror 1
 
-set nthreads    120
+set nthreads 20
 set _tilde 0
-set downloader aria2c
-set limit_rate 25m
+# set limit_rate 25m
 #
 ############# end config ##############
 
@@ -46,23 +43,23 @@ set limit_rate 25m
 ### INSTALLER repo (udeb) '
 
 arch=''; version=''
-mirror='https://deb.debian.org/debian'
+mirror='http://deb.debian.org/debian'
 s_mirror='https://security.debian.org'
 d_mirror='http://debug.mirrors.debian.org/debian-debug'
 add_d "$mirror"
 add_d "$s_mirror"
 #add_d "$d_mirror"
 echo_d -e "\n# DEBIAN"
-for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid experimental; do
+for version in '#oldstable' stable testing '#stretch' '#buster' '#bullseye' bookworm trixie sid experimental; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 arm64 armhf src; do
 		components="main non-free contrib"
-		if [[ ($version == sid || $version == unstable || $version == experimental || $version == testing) || ($version == bookworm) ]]; then
+		if [[ ($version == sid || $version == unstable || $version == experimental || $version == testing) || ($version == bookworm) || ($version == trixie) ]]; then
 			components="${components} non-free-firmware"
 		fi
 		echo_d "deb-$arch $mirror ${version} $components"
 		#echo_d "deb-$arch $d_mirror ${version}-debug $components"
-		if ! [[ $version == sid || $version == unstable || $version == experimental ]]; then
+		if ! [[ $version == sid || $version == unstable || $version == experimental || $version == trixie ]]; then
 			echo_d "deb-$arch $mirror ${version}-updates $components"
 			echo_d "deb-$arch $mirror ${version}-proposed-updates $components"
 			#echo_d "deb-$arch $d_mirror ${version}-proposed-updates-debug $components"
@@ -83,10 +80,10 @@ for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookwor
 done
 
 arch=''; version=''
-mirror='https://fasttrack.debian.net/debian-fasttrack'
+mirror='http://fasttrack.debian.net/debian-fasttrack'
 add_d "$mirror"
 echo_d -e "\n# DEBIAN FASTTRACK"
-for version in '#buster-fasttrack' '#buster-backports' bullseye-backports-staging bullseye-fasttrack; do
+for version in '#buster-fasttrack' '#buster-backports' '#bullseye-backports-staging' '#bullseye-fasttrack' bookworm-backports-staging bookworm-fasttrack; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main contrib non-free"
@@ -95,23 +92,24 @@ for version in '#buster-fasttrack' '#buster-backports' bullseye-backports-stagin
 done
 
 arch=''; version=''
-mirror='https://www.deb-multimedia.org'
+mirror='http://www.deb-multimedia.org'
 add_d "$mirror"
 echo_d -e "\n# DEBIAN MULTIMEDIA"
-for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
+for version in '#oldstable' stable testing '#stretch' '#buster' '#bullseye' bookworm trixie sid; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 arm64 armhf src; do
 		echo_d "deb-$arch $mirror ${version} main non-free"
-		[[ $version == bookworm || $version == testing || $version == sid || $version == experimental || $arch == src ]] || echo_d "deb-$arch $mirror ${version}-backports main"
+		[[ $version == trixie || $version == testing || $version == sid || $version == experimental || $arch == src ]] || echo_d "deb-$arch $mirror ${version}-backports main"
 	done
 	echo_d ''
 done
 
 arch=''; version=''
-mirror='https://dl.winehq.org/wine-builds/debian'
+mirror='http://dl.winehq.org/wine-builds/debian'
 add_d "$mirror"
 echo_d -e "\n# WINE"
-for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
+# Disabled stable and testing because of incorrect Release file size
+for version in '#oldstable' '#stable' '#testing' '#stretch' '#buster' '#bullseye' bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in all amd64 i386 src; do
 		[[ ($version == sid && $arch == src) || ($version == oldstable && $arch == all) || ($version == buster && $arch == all) || ($version == testing && $arch == all) ]] || echo_d "deb-$arch $mirror ${version} main"
@@ -120,7 +118,7 @@ for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookwor
 done
 
 arch=''; version=''
-mirror='https://download.webmin.com/download/repository'
+mirror='http://download.webmin.com/download/repository'
 add_d "$mirror"
 echo_d -e "\n# WEBMIN"
 for arch in amd64 i386 arm64 armhf src; do
@@ -128,9 +126,9 @@ for arch in amd64 i386 arm64 armhf src; do
 done
 
 arch=''; version=''
-mirror='https://repo.antixlinux.com'
+mirror='http://repo.antixlinux.com'
 echo_d -e "\n# ANTIX (Based on debian)"
-for version in '#stretch' '#buster' bullseye bookworm sid; do
+for version in '#stretch' '#buster' '#bullseye' bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror/$version ${version} main nosystemd nonfree"
@@ -143,19 +141,21 @@ arch=''; version=''
 mirror='http://mxrepo.com/mx/repo'
 add_d "$mirror"
 echo_d -e "\n# MX-PACKAGES (stable)"
-for version in '#stretch' '#buster' bullseye bookworm; do
+for version in '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main non-free ahs"
 	done
 	echo_d ''
 done
+echo_d "ignore_errors $mirror pool/main/b/bash-config/bash-config-dbgsym_24.01.02_amd64.deb"
+echo_d "ignore_errors $mirror pool/main/b/bash-config/bash-config-dbgsym_24.01.02_i386.deb"
 
 arch=''; version=''
-mirror='https://liquorix.net/debian'
+mirror='http://liquorix.net/debian'
 add_d "$mirror"
 echo_d -e "\n# ZEN KERNEL (liquorix)"
-for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm sid; do
+for version in '#oldstable' stable testing '#stretch' '#buster' '#bullseye' bookworm trixie sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 '#i386' src; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -166,7 +166,7 @@ done
 mirror='http://hwraid.le-vert.net/debian'
 add_d "$mirror"
 echo_d -e "\n# HWRAID repo"
-for version in '#stretch' '#buster' bullseye; do
+for version in '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 src; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -175,7 +175,7 @@ for version in '#stretch' '#buster' bullseye; do
 done
 
 arch=''; version=''
-mirror='#https://deb.opera.com/opera'
+mirror='#http://deb.opera.com/opera'
 add_d "$mirror"
 echo_d -e "\n# OPERA"
 for version in stable testing sid; do
@@ -186,10 +186,10 @@ for version in stable testing sid; do
 done
 
 arch=''; version=''
-mirror='https://download.virtualbox.org/virtualbox/debian'
+mirror='http://download.virtualbox.org/virtualbox/debian'
 add_d "$mirror"
 echo_d -e "\n# VIRTUALBOX"
-for version in '#stretch' '#buster' bullseye; do
+for version in '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386; do
 		echo_d "deb-$arch $mirror ${version} contrib non-free"
@@ -197,7 +197,7 @@ for version in '#stretch' '#buster' bullseye; do
 done
 
 arch=''; version=''
-mirror='https://download.onlyoffice.com/repo/debian'
+mirror='http://download.onlyoffice.com/repo/debian'
 add_d "$mirror"
 echo_d -e "\n# ONLYOFFICE"
 for arch in amd64 i386; do
@@ -205,7 +205,7 @@ for arch in amd64 i386; do
 done
 
 arch=''; version=''
-mirror='#https://http.kali.org/kali'
+mirror='#http://http.kali.org/kali'
 add_d "$mirror"
 echo_d -e "\n# KALI LINUX"
 for version in kali-rolling '#kali-dev'; do
@@ -220,7 +220,7 @@ arch=''; version=''
 mirror='#http://raspbian.raspberrypi.org/raspbian'
 add_d "$mirror"
 echo_d -e "\n# RASPBIAN"
-for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookworm; do
+for version in '#oldstable' stable testing '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	for arch in armhf src; do
 		echo_d "deb-$arch $mirror ${version} main contrib non-free rpi"
@@ -229,10 +229,10 @@ for version in '#oldstable' stable testing '#stretch' '#buster' bullseye bookwor
 done
 
 arch=''; version=''
-mirror='https://apt.armbian.com'
+mirror='http://apt.armbian.com'
 add_d "$mirror"
 echo_d -e "\n# ARMBIAN"
-for version in '#focal' '#buster' bullseye bookworm sid; do
+for version in '#focal' '#buster' '#bullseye' bookworm sid; do
 	echo_d -e "# -- $version"
 	for arch in arm64 armhf; do
 		echo_d "deb-$arch $mirror ${version} main $version-utils $version-desktop"
@@ -286,29 +286,19 @@ for version in '#xenial' '#focal' jammy; do
 	echo_d ''
 done
 
-#For astra please see https://wiki.astralinux.ru/pages/viewpage.action?pageId=158598882.
+#For astra please see http://wiki.astralinux.ru/pages/viewpage.action?pageId=158598882.
 
 arch=''; version=''
-mirror='https://dl.astralinux.ru/astra/stable'
+mirror='http://dl.astralinux.ru/astra/frozen'
 add_d "$mirror"
 echo_d -e "\n# ASTRALINUX SE"
-for version in stable "1.7_x86-64"; do
-	echo_d -e "# -- $version"
+for version in "1.7.5/uu/1"; do
 	for arch in amd64; do
-		echo_d "deb-$arch $mirror/1.7_x86-64/repository-main ${version} main contrib non-free"
-		echo_d "deb-$arch $mirror/1.7_x86-64/repository-update ${version} main contrib non-free"
-		echo_d "deb-$arch $mirror/1.7_x86-64/repository-base ${version} main contrib non-free"
-		[[ $version == stable ]] || echo_d "deb-$arch $mirror/1.7_x86-64/repository-extended ${version} main contrib non-free astra-ce"
+		echo_d "deb-$arch $mirror/1.7_x86-64/${version}/repository-main 1.7_x86-64 main contrib non-free"
+		echo_d "deb-$arch $mirror/1.7_x86-64/${version}/repository-update 1.7_x86-64 main contrib non-free"
+		echo_d "deb-$arch $mirror/1.7_x86-64/${version}/repository-base 1.7_x86-64 main contrib non-free"
+		echo_d "deb-$arch $mirror/1.7_x86-64/${version}/repository-extended 1.7_x86-64 main contrib non-free astra-ce"
 	done
-done
-echo_d ''
-version="4.7_arm"
-echo_d -e "# -- $version"
-for arch in arm64 '#armhf'; do
-	echo_d "deb-$arch $mirror/4.7_arm/repository-main ${version} main contrib non-free baikal1 huawei1"
-	echo_d "deb-$arch $mirror/4.7_arm/repository-update ${version} main contrib non-free baikal1 huawei1"
-	echo_d "deb-$arch $mirror/4.7_arm/repository-base ${version} main contrib non-free baikal1 huawei1"
-	[[ $arch == armhf ]] || echo_d "deb-$arch $mirror/${version}/repository-extended ${version} main contrib non-free astra-ce"
 done
 echo_d ''
 
@@ -316,7 +306,7 @@ arch=''; version=''
 mirror='http://download.proxmox.com/debian/pve'
 add_d "$mirror"
 echo_d -e "\n# PROXMOX"
-for version in '#stretch' '#buster' bullseye bookworm; do
+for version in '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	echo_d "deb-amd64 $mirror ${version} pve-no-subscription pvetest"
 	echo_d ''
@@ -326,7 +316,7 @@ arch=''; version=''
 mirror='#http://repo.mongodb.org/apt/debian'
 add_d "$mirror"
 echo_d -e "\n# MONGODB CE (debian)"
-for version in '#stretch' buster; do
+for version in '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	for arch in amd64 arm64; do
 		echo_d "deb-$arch $mirror ${version}/mongodb-org/5.0 main"
@@ -335,17 +325,17 @@ for version in '#stretch' buster; do
 done
 
 arch=''; version=''
-mirror='#https://repo.radeon.com/rocm/apt/debian'
+mirror='#http://repo.radeon.com/rocm/apt/debian'
 add_d "$mirror"
 echo_d -e "\n# AMD ROCM"
 echo_d "deb-amd64 $mirror ubuntu main proprietary"
 echo_d ''
 
 arch=''; version=''
-mirror='#https://repo.radeon.com/amdgpu/latest/ubuntu'
+mirror='#http://repo.radeon.com/amdgpu/latest/ubuntu'
 add_d "$mirror"
 echo_d -e "\n# AMDGPU"
-for version in bionic focal; do
+for version in focal jammy; do
 	echo_d -e "# -- $version"
 	for arch in i386 amd64 src; do
 		echo_d "deb-$arch $mirror ${version} main proprietary"
@@ -354,7 +344,7 @@ for version in bionic focal; do
 done
 
 arch=''; version=''
-mirror='#https://repo.radeon.com/amdvlk/apt/debian'
+mirror='#http://repo.radeon.com/amdvlk/apt/debian'
 add_d "$mirror"
 echo_d -e "\n# AMDVLK"
 for arch in i386 amd64; do
@@ -362,10 +352,10 @@ for arch in i386 amd64; do
 done
 
 arch=''; version=''
-mirror='#https://deb.torproject.org/torproject.org'
+mirror='#http://deb.torproject.org/torproject.org'
 add_d "$mirror"
 echo_d -e "\n# TOR"
-for version in '#stretch' '#buster' bullseye bookworm sid; do
+for version in '#stretch' '#buster' '#bullseye' bookworm trixie sid; do
 	echo_d -e "# -- $version"
 	for arch in amd64 i386 arm64; do
 		echo_d "deb-$arch $mirror ${version} contrib non-free"
@@ -376,7 +366,7 @@ arch=''; version=''
 mirror='#http://archive.turnkeylinux.org/debian'
 add_d "$mirror"
 echo_d -e "\n# TURNKEY"
-for version in '#stretch' '#buster' bullseye bookworm; do
+for version in '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	for arch in all amd64; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -387,19 +377,19 @@ for version in '#stretch' '#buster' bullseye bookworm; do
 done
 
 arch=''; version=''
-mirror='#https://packages.microsoft.com/repos/vscode'
+mirror='#http://packages.microsoft.com/repos/vscode'
 add_d "$mirror"
 echo_d -e "\n# VSCODE"
 echo_d "deb-amd64 $mirror stable main"
 
 arch=''; version=''
-mirror='https://repo.saltproject.io/salt/py3/debian/11/amd64/latest'
+mirror='http://repo.saltproject.io/salt/py3/debian/12/amd64/latest'
 add_d "$mirror"
 echo_d -e "\n# SALT (latest)"
-echo_d "deb-amd64 $mirror bullseye main"
+echo_d "deb-amd64 $mirror bookworm main"
 
 arch=''; version=''
-mirror='#https://packages.microsoft.com/repos/ms-teams'
+mirror='#http://packages.microsoft.com/repos/ms-teams'
 add_d "$mirror"
 echo_d -e "\n# MS TEAMS"
 for arch in amd64 arm64; do
@@ -407,7 +397,7 @@ for arch in amd64 arm64; do
 done
 
 arch=''; version=''
-mirror='#https://packages.microsoft.com/repos/code'
+mirror='#http://packages.microsoft.com/repos/code'
 add_d "$mirror"
 echo_d -e "\n# MS CODE"
 for arch in amd64 arm64 armhf; do
@@ -415,10 +405,10 @@ for arch in amd64 arm64 armhf; do
 done
 
 arch=''; version=''
-mirror='#https://packages.microsoft.com/debian/11/prod'
+mirror='#http://packages.microsoft.com/debian/12/prod'
 add_d "$mirror"
-echo_d -e "\n# MS PROD DEBIAN 11"
-for version in bullseye insiders-fast insiders-slow nightly testing; do
+echo_d -e "\n# MS PROD DEBIAN 12"
+for version in bookworm insiders-fast insiders-slow nightly testing; do
 	echo_d -e "# -- $version"
 	for arch in amd64 arm64 armhf; do
 		echo_d "deb-$arch $mirror ${version} main"
@@ -426,7 +416,7 @@ for version in bullseye insiders-fast insiders-slow nightly testing; do
 done
 
 arch=''; version=''
-mirror='#https://paulcarroty.gitlab.io/vscodium-deb-rpm-repo/debs'
+mirror='#http://paulcarroty.gitlab.io/vscodium-deb-rpm-repo/debs'
 add_d "$mirror"
 echo_d -e "\n# VSCODIUM"
 for arch in amd64 i386 arm64 armhf; do
@@ -434,10 +424,10 @@ for arch in amd64 i386 arm64 armhf; do
 done
 
 arch=''; version=''
-mirror='https://download.docker.com/linux/debian'
+mirror='http://download.docker.com/linux/debian'
 add_d "$mirror"
 echo_d -e "\n# Docker CE"
-for version in '#stretch' "#buster" bullseye; do
+for version in '#stretch' "#buster" '#bullseye'; do
 	echo_d -e "# -- $version"
 	for arch in amd64 arm64 armhf '#ppc64el'; do
 		echo_d "deb-$arch $mirror ${version} stable test nightly"
@@ -445,10 +435,10 @@ for version in '#stretch' "#buster" bullseye; do
 done
 
 arch=''; version=''
-mirror='https://nginx.org/packages/debian'
+mirror='http://nginx.org/packages/debian'
 add_d "$mirror"
 echo_d -e "\n# NGINX"
-for version in '#stretch' '#buster' bullseye bookworm; do
+for version in '#stretch' '#buster' '#bullseye' bookworm; do
 	echo_d -e "# -- $version"
 	for arch in amd64 arm64; do
 		echo_d "deb-$arch $mirror ${version} nginx"
@@ -456,7 +446,7 @@ for version in '#stretch' '#buster' bullseye bookworm; do
 done
 
 arch=''; version=''
-mirror='https://download.opensuse.org/repositories/home:/Hezekiah/Debian_10'
+mirror='http://download.opensuse.org/repositories/home:/Hezekiah/Debian_10'
 add_d "$mirror"
 echo_d -e "\n# samba-ad-dc"
 for arch in amd64 src; do

@@ -24,4 +24,4 @@ It is running on LXC container with Debian (512MB RAM, 2 threads, 6TB HDD BTRFS)
 * Activate `offline_mirror.timer` in your system.
 
 # Sources:
-* apt-mirror: [Stifler6996's apt-mirror](https://github.com/Stifler6996/apt-mirror)
+* apt-mirror (perl version): [Stifler6996's apt-mirror](https://github.com/Stifler6996/apt-mirror)

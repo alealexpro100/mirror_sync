@@ -29,7 +29,7 @@ ARCHCN_MIRROR="rsync://rsync.mirrors.ustc.edu.cn/repo/archlinuxcn"
 #SOLYDXK_MIRROR="rsync://cdimage.debian.org/mirror/solydxk.com"
 VOID_MIRROR="rsync://mirrors.dotsrc.org/voidlinux" # ~253GB
 #ASTRA_MIRROR="rsync://dl.astralinux.ru/astra/astra"
-ASTRA_MIRROR="rsync://dl.astralinux.ru/astra" # ~75GB
+#ASTRA_MIRROR="rsync://dl.astralinux.ru/astra" # ~75GB
 #ALT_MIRROR="rsync://rsync.altlinux.org/ALTLinux"
 MXISO_MIRROR="rsync://mirrors.dotsrc.org/mx-isos" # ~49GB
 #FDROID_MIRROR="rsync://mirrors.dotsrc.org/fdroid"
@@ -41,7 +41,8 @@ FEDORA_VIRTIO_MIRROR="rsync://fedorapeople.org/groups/virt/virtio-win" # ~38GB
 #OPENWRT_MIRROR="rsync://openwrt.tetaneutral.net/openwrt"
 #HAIKU_MIRROR="rsync://mirror.rit.edu/haiku"
 #TINYCORE_MIRROR="rsync://tinycorelinux.net/tc" # ~72GB
-APT_MIRROR="1" APT_MIRROR_FIX="0"
+APT_MIRROR="0" APT_MIRROR_FIX="0"
+APT_MIRROR2="1"
 ORACLE_MIRROR="0"
 MIKROTIK_MIRROR="1" # ~20GB
 
@@ -165,6 +166,9 @@ if [[ "$APT_MIRROR" == "1" && -x $(command -v wget) && -x $(command -v gunzip) &
         bash "$mirror_path/mirror/download_E.sh"
     fi
     unset NO_APT_ACTIONS
+fi
+if [[ "$APT_MIRROR2" == "1" ]]; then
+    apt-mirror apt/mirror.list
 fi
 
 # --- CYGWIN MIRROR

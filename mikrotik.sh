@@ -35,7 +35,7 @@ function get_files() {
 function download_files() (
   [[ -d "$mirror_dir" ]] || mkdir -p "$mirror_dir"
   cd "$mirror_dir"
-  rm -rf mt.lv # clean useless file
+  rm -f mt.lv || : # clean useless file
   get_files | sort -u > "urls_list"
   while read -r line; do
     file="${line//https\:\/\//}"
